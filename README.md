@@ -18,27 +18,36 @@
 
 ## Установка
 
-```bash
-pip install evtx pandas openpyxl ```
+pip install evtx pandas openpyxl
 
 ## Использование
 
-``` bash
-python analyzer_gui.py ```
+python analyzer_gui.py
 
 ## Основано на
-Zircolite — ядро анализа (GNU LGPL) https://github.com/wagga40/Zircolite
-python-evtx — парсинг EVTX (MIT)https://github.com/williballenthin/python-evtx
-Sigma Rules — правила обнаружения (DRL 1.0) https://github.com/SigmaHQ/sigma
+
+Zircolite (GNU LGPL) - https://github.com/wagga40/Zircolite
+
+python-evtx (MIT) - https://github.com/williballenthin/python-evtx
+
+Sigma Rules (DRL 1.0) - https://github.com/SigmaHQ/sigma
 
 ## Лицензия
+
 Исходный код проекта: MIT License
+
 Zircolite: GNU LGPL
+
 python-evtx: MIT
+
 Sigma Rules: DRL 1.0
 
 ## Авторы
+
 Пундак Алиса Сергеевна
+
 Саматова Анастасия Романовна
+
 Куприянова Екатерина Алексеевна
+
 Скурыхина Евгения Максимовна
