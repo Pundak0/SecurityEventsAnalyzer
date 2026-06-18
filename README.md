@@ -19,12 +19,12 @@
 ## Установка
 
 ```bash
-pip install evtx pandas openpyxl
+pip install evtx pandas openpyxl ```
 
 ## Использование
 
 ``` bash
-python analyzer_gui.py
+python analyzer_gui.py ```
 
 ## Основано на
 Zircolite — ядро анализа (GNU LGPL) https://github.com/wagga40/Zircolite
