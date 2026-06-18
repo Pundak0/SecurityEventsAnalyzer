@@ -1,0 +1,24 @@
+NOTICE
+
+This project includes the following third-party components:
+
+1. Zircolite (https://github.com/wagga40/Zircolite)
+   - License: GNU Lesser General Public License (LGPL)
+   - Used for: EVTX parsing and Sigma rule detection
+
+2. python-evtx (https://github.com/williballenthin/python-evtx)
+   - License: MIT License
+   - Used for: EVTX file parsing
+
+3. Sigma Rules (https://github.com/SigmaHQ/sigma)
+   - License: Detection Rule License (DRL) 1.0
+   - Used for: Detection rules
+
+4. Sigma rules from Zircolite repository
+   - License: Detection Rule License (DRL) 1.0
+   - Used as base rules for detection
+
+5. Security Events Analyzer (GUI, reports, helper scripts)
+   - License: MIT License
+   - Copyright (c) 2024 Пундак Алиса Сергеевна, Саматова Анастасия Романовна, Куприянова Екатерина Алексеевна, Скурыхина Евгения Максимовна
+   - Original code developed as a wrapper around Zircolite

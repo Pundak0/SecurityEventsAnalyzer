@@ -1,0 +1,730 @@
+[
+    {
+        "title": "BITS large transfer (bytesTransferred)",
+        "id": "bits-bytes-02",
+        "status": "stable",
+        "description": "Detects BITS transfer > 2 GB",
+        "author": "Security Team",
+        "tags": [],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=60 AND bytesTransferred > 2000000000"
+        ]
+    },
+    {
+        "title": "Exchange - Enable-TransportAgent with non-existent agent 'hack'",
+        "id": "exchange-enable-hack-001",
+        "status": "stable",
+        "description": "Detects attempt to enable non-existent transport agent named 'hack'",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1505", "exchange"],
+        "falsepositives": ["Legitimate admin typo"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=6 AND Message LIKE '%Enable-TransportAgent%' AND Message LIKE '%hack%'"
+        ]
+    },
+    {
+        "title": "Exchange - Install-TransportAgent with suspicious name 'Evil' and DLL",
+        "id": "exchange-install-evil-002",
+        "status": "stable",
+        "description": "Detects installation of transport agent named 'Evil' with assembly path to a DLL",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1505", "exchange"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=6 AND Message LIKE '%Install-TransportAgent%' AND Message LIKE '%Evil%' AND Message LIKE '%.dll%'"
+        ]
+    },
+    {
+        "title": "Exchange - Transport agent action by compromised user 'admmig'",
+        "id": "exchange-user-admmig-003",
+        "status": "stable",
+        "description": "Detects any transport agent enable/install attempt by user 'admmig'",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1505"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=6 AND Message LIKE '%admmig%' AND (Message LIKE '%TransportAgent%' OR Message LIKE '%Install-%' OR Message LIKE '%Enable-%')"
+        ]
+    },
+    {
+        "title": "Exchange - Attempt to load DLL from suspicious path (no drive letter)",
+        "id": "exchange-dll-relative-path-004",
+        "status": "experimental",
+        "description": "Detects transport agent installation with assembly path using relative path or just DLL name",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1505"],
+        "falsepositives": ["Legitimate relative paths in some environments"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=6 AND Message LIKE '%Install-TransportAgent%' AND Message LIKE '%AssemblyPath%' AND Message NOT LIKE '%:\\%'"
+        ]
+    },
+    {
+        "title": "Exchange - Transport agent installation error (generic)",
+        "id": "exchange-transport-error-005",
+        "status": "experimental",
+        "description": "Detects any failed transport agent installation with error message",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Legitimate misconfigurations"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=6 AND Message LIKE '%Transport agent%' AND Message LIKE '%doesn''t exist%'"
+        ]
+    },
+    {
+        "title": "Proxy change to hacker-proxy.lan (field)",
+        "id": "proxy-field-001",
+        "status": "stable",
+        "description": "Detects proxy field set to hacker-proxy.lan",
+        "author": "Security Team",
+        "tags": ["attack.t1090"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=5600 AND pwszProxy LIKE '%hacker-proxy.lan%'"
+        ]
+    },
+    {
+        "title": "AutoConfig URL set to hacker-bypass.com",
+        "id": "proxy-field-002",
+        "status": "stable",
+        "description": "Detects autoconfig URL field",
+        "author": "Security Team",
+        "tags": ["attack.t1090"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=5600 AND pwszAutoConfigUrl LIKE '%hacker-bypass.com%'"
+        ]
+    },
+    {
+        "title": "DNS - EventLogLevel changed to 1 (minimal logging)",
+        "id": "dns-eventloglevel-1-001",
+        "status": "stable",
+        "description": "Detects DNS server event log level set to 1 (only errors)",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion", "attack.t1562"],
+        "falsepositives": ["Legitimate administrative change"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=541 AND Setting='EventLogLevel' AND NewValue='1'"
+        ]
+    },
+    {
+        "title": "DNS - EventLogLevel changed to 7",
+        "id": "dns-eventloglevel-7-002",
+        "status": "experimental",
+        "description": "Detects DNS server event log level set to 7",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=541 AND Setting='EventLogLevel' AND NewValue='7'"
+        ]
+    },
+    {
+        "title": "DNS - DNSSEC disabled (EnableDnsSec=0)",
+        "id": "dns-dnssec-disabled-003",
+        "status": "stable",
+        "description": "Detects disabling of DNSSEC",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion"],
+        "falsepositives": ["Legitimate admin action"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=541 AND Setting='EnableDnsSec' AND NewValue='0'"
+        ]
+    },
+    {
+        "title": "DNS - Any audit setting change",
+        "id": "dns-audit-change-004",
+        "status": "experimental",
+        "description": "Detects any change to DNS server auditing settings",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion"],
+        "falsepositives": ["Routine maintenance"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=541 AND (Setting='EventLogLevel' OR Setting='EnableDnsSec')"
+        ]
+    },
+    {
+        "title": "OpenSSH - Failed password for valid user 'admmig'",
+        "id": "ssh-failed-admmig-001",
+        "status": "stable",
+        "description": "Detects failed SSH password attempt for user admmig from 10.23.23.9",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Failed password for admmig%' AND payload LIKE '%10.23.23.9%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Too many authentication failures",
+        "id": "ssh-too-many-002",
+        "status": "stable",
+        "description": "Detects disconnection due to too many authentication failures (brute-force detection)",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Too many authentication failures%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Connection closed after failed auth",
+        "id": "ssh-connection-closed-003",
+        "status": "experimental",
+        "description": "Detects connection closed after failed authentication attempt",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": ["Legitimate user with frequent typos"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Connection closed by authenticating user%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Any failed password from 10.23.23.9 (generic)",
+        "id": "ssh-failed-any-004",
+        "status": "experimental",
+        "description": "Detects any failed password attempt from known malicious IP",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Failed password%' AND payload LIKE '%10.23.23.9%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Multiple failed attempts by same user (aggregate)",
+        "id": "ssh-multiple-fails-005",
+        "status": "experimental",
+        "description": "Detects 3+ failed password attempts for admmig within short time",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Failed password for admmig%' GROUP BY payload HAVING COUNT(*) >= 3"
+        ]
+    },
+    {
+        "title": "OpenSSH - Invalid user 'hacker' from 10.23.23.9",
+        "id": "ssh-invalid-hacker-001",
+        "status": "stable",
+        "description": "Detects connection attempt with invalid username 'hacker' from malicious IP",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Invalid user hacker%' AND payload LIKE '%10.23.23.9%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Failed password for invalid user 'hacker'",
+        "id": "ssh-failed-invalid-hacker-002",
+        "status": "stable",
+        "description": "Detects failed password attempt for invalid user 'hacker'",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Failed password for invalid user hacker%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Too many failures for invalid user",
+        "id": "ssh-toomany-invalid-003",
+        "status": "stable",
+        "description": "Detects disconnection due to too many authentication failures for an invalid user",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Disconnecting invalid user%' AND payload LIKE '%Too many authentication failures%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Any invalid user attempt from 10.23.23.9",
+        "id": "ssh-any-invalid-004",
+        "status": "experimental",
+        "description": "Detects any connection attempt with invalid user from malicious IP",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Invalid user%' AND payload LIKE '%10.23.23.9%'"
+        ]
+    },
+    {
+        "title": "OpenSSH - Multiple invalid user attempts (aggregate)",
+        "id": "ssh-multiple-invalid-005",
+        "status": "experimental",
+        "description": "Detects 3+ attempts with invalid user 'hacker'",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=4 AND payload LIKE '%Invalid user hacker%' GROUP BY payload HAVING COUNT(*) >= 3"
+        ]
+    },
+    {
+        "title": "PrintNightmare - Driver init failure (Param2 contains mimispool)",
+        "id": "pn-param2-354",
+        "status": "stable",
+        "description": "Detects EventID 354 where Param2 contains mimispool.dll",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=354 AND Param2 LIKE '%mimispool%'"
+        ]
+    },
+    {
+        "title": "PrintNightmare - Plugin load failed (PluginDllName contains mimispool)",
+        "id": "pn-plugin-808",
+        "status": "stable",
+        "description": "Detects EventID 808 where PluginDllName contains mimispool.dll",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=808 AND PluginDllName LIKE '%mimispool%'"
+        ]
+    },
+    {
+        "title": "PrintNightmare - Default printer changed to Kiwi Legit Printer",
+        "id": "pn-printer-823",
+        "status": "stable",
+        "description": "Detects EventID 823 with NewDefaultPrinter pointing to malicious share",
+        "author": "Security Team",
+        "tags": ["attack.lateral_movement"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=823 AND NewDefaultPrinter LIKE '%Kiwi Legit Printer%'"
+        ]
+    },
+    {
+        "title": "PrintNightmare - Any Param or Plugin field with mimispool",
+        "id": "pn-any-field",
+        "status": "experimental",
+        "description": "Searches across known fields for mimispool",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=316 OR EventID=354 OR EventID=808) AND (Param2 LIKE '%mimispool%' OR PluginDllName LIKE '%mimispool%' OR Param1 LIKE '%mimispool%' OR Param4 LIKE '%mimispool%')"
+        ]
+    },
+    {
+        "title": "SQL Server - User linked to database with suspicious name 'test-sql'",
+        "id": "sql-user-test-sql-001",
+        "status": "stable",
+        "description": "Detects CREATE USER for 'test-sql' (likely test or backdoor account)",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1136"],
+        "falsepositives": ["Legitimate testing"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE USER [test-sql]%'"
+        ]
+    },
+    {
+        "title": "SQL Server - User created by OFFSEC\\admin (privileged account)",
+        "id": "sql-user-admin-002",
+        "status": "stable",
+        "description": "Detects user creation action performed by OFFSEC\\admin (potentially compromised)",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1136"],
+        "falsepositives": ["Legitimate admin work"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%OFFSEC\\\\admin%' AND Message LIKE '%CREATE USER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - User created in database RCS-TEST-db",
+        "id": "sql-user-rcsdb-003",
+        "status": "experimental",
+        "description": "Detects user creation in RCS-TEST-db database",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Legitimate development"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%database_name:RCS-TEST-db%' AND Message LIKE '%CREATE USER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Any user creation event (generic)",
+        "id": "sql-user-create-generic-004",
+        "status": "experimental",
+        "description": "Detects any CREATE USER statement (may be noisy, but useful for auditing)",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Routine account management"],
+        "level": "low",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE USER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - User linked to login with same name (potential persistence)",
+        "id": "sql-user-self-link-005",
+        "status": "experimental",
+        "description": "Detects CREATE USER ... FOR LOGIN with same name (often used for backdoors)",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Normal account mapping"],
+        "level": "low",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE USER [%] FOR LOGIN [%]%' AND Message REGEXP '\\[test-sql\\]'"
+        ]
+    },
+    {
+        "title": "SQL Server - User added to sysadmin role (critical privilege escalation)",
+        "id": "sql-add-sysadmin-001",
+        "status": "stable",
+        "description": "Detects ALTER SERVER ROLE ... ADD MEMBER to sysadmin",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation", "attack.t1548"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ALTER SERVER ROLE [sysadmin] ADD MEMBER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Member added to server role by compromised user 'admmig'",
+        "id": "sql-add-role-admmig-002",
+        "status": "stable",
+        "description": "Detects server role modification performed by OFFSEC\\admmig",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%OFFSEC\\\\admmig%' AND Message LIKE '%ADD MEMBER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Addition of 'test-sql' to any server role",
+        "id": "sql-add-test-sql-003",
+        "status": "stable",
+        "description": "Detects when user 'test-sql' is added to a server role (indicator of backdoor)",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ADD MEMBER [test-sql]%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Any alteration of server role membership",
+        "id": "sql-alter-role-generic-004",
+        "status": "experimental",
+        "description": "Detects any ALTER SERVER ROLE ... ADD/DROP MEMBER statement",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": ["Legitimate role management"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ALTER SERVER ROLE%' AND Message LIKE '%ADD MEMBER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - User added to db_accessadmin role (privilege escalation)",
+        "id": "sql-add-db-accessadmin-001",
+        "status": "stable",
+        "description": "Detects ALTER ROLE [db_accessadmin] ADD MEMBER",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation", "attack.t1548"],
+        "falsepositives": ["Legitimate admin actions"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ALTER ROLE [db_accessadmin] ADD MEMBER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Database role modification by compromised user 'admmig'",
+        "id": "sql-db-role-admmig-002",
+        "status": "stable",
+        "description": "Detects ALTER ROLE performed by OFFSEC\\admmig",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%OFFSEC\\\\admmig%' AND Message LIKE '%ALTER ROLE%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Addition of 'test-sql' to a database role (backdoor indicator)",
+        "id": "sql-db-role-test-sql-003",
+        "status": "stable",
+        "description": "Detects ADD MEMBER [test-sql] to any database role",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ADD MEMBER [test-sql]%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Role change in database RCS-TEST-db",
+        "id": "sql-db-role-rcsdb-004",
+        "status": "experimental",
+        "description": "Detects ALTER ROLE in RCS-TEST-db",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": ["Development activity"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%database_name:RCS-TEST-db%' AND Message LIKE '%ALTER ROLE%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Any database role membership change (generic)",
+        "id": "sql-alter-db-role-generic-005",
+        "status": "experimental",
+        "description": "Detects any ALTER ROLE ADD/DROP MEMBER statement",
+        "author": "Security Team",
+        "tags": ["attack.privilege_escalation"],
+        "falsepositives": ["Routine role management"],
+        "level": "low",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ALTER ROLE%' AND Message LIKE '%ADD MEMBER%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Local user created with weak password policy (CHECK_EXPIRATION=OFF, CHECK_POLICY=OFF)",
+        "id": "sql-create-login-weak-001",
+        "status": "stable",
+        "description": "Detects CREATE LOGIN with disabled password expiration and policy (backdoor account)",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.t1136"],
+        "falsepositives": ["Legitimate service accounts"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE LOGIN%' AND Message LIKE '%CHECK_EXPIRATION=OFF%' AND Message LIKE '%CHECK_POLICY=OFF%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Suspicious login name 'test-sql' created",
+        "id": "sql-create-login-test-sql-002",
+        "status": "stable",
+        "description": "Detects creation of login with name 'test-sql' (likely test or backdoor)",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE LOGIN [test-sql]%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Login created by OFFSEC\\admin (privileged account)",
+        "id": "sql-create-login-admin-003",
+        "status": "stable",
+        "description": "Detects login creation performed by OFFSEC\\admin",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Legitimate admin work"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%OFFSEC\\\\admin%' AND Message LIKE '%CREATE LOGIN%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Login created with default database 'master'",
+        "id": "sql-create-login-master-004",
+        "status": "experimental",
+        "description": "Detects CREATE LOGIN with DEFAULT_DATABASE=[master] (often used for persistence)",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Normal configuration"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE LOGIN%' AND Message LIKE '%DEFAULT_DATABASE=[master]%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Any CREATE LOGIN event (generic)",
+        "id": "sql-create-login-generic-005",
+        "status": "experimental",
+        "description": "Detects any creation of SQL Server login",
+        "author": "Security Team",
+        "tags": ["attack.persistence"],
+        "falsepositives": ["Routine account management"],
+        "level": "low",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%CREATE LOGIN%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Failed login for non-existing user 'b'",
+        "id": "sql-fail-login-b-001",
+        "status": "stable",
+        "description": "Detects failed login attempt for non-existing user 'b'",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Login failed for user %b%' AND Message LIKE '%Could not find a login%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Failed login for non-existing user 'administrator'",
+        "id": "sql-fail-login-admin-002",
+        "status": "stable",
+        "description": "Detects failed login attempt for non-existing 'administrator'",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Login failed for user %administrator%' AND Message LIKE '%Could not find a login%'"
+        ]
+    },
+    {
+        "title": "SQL Server - SQL authentication attempt when Windows auth only",
+        "id": "sql-fail-win-auth-only-003",
+        "status": "stable",
+        "description": "Detects SQL auth attempt on server configured for Windows authentication only",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Server is configured for Windows authentication only%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Any failed login with non-existing user (generic)",
+        "id": "sql-fail-nonexistent-generic-005",
+        "status": "experimental",
+        "description": "Detects any login failure due to missing login",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "low",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Could not find a login%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Failed login for disabled SA account from 10.23.23.9",
+        "id": "sql-fail-sa-ip-001",
+        "status": "stable",
+        "description": "Detects failed login attempt for 'sa' from IP 10.23.23.9",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Login failed for user %sa%' AND Message LIKE '%CLIENT: 10.23.23.9%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Failed SA login with password evaluation error",
+        "id": "sql-fail-sa-error-003",
+        "status": "stable",
+        "description": "Detects 'An error occurred while evaluating the password' for SA account",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Login failed for user %sa%' AND Message LIKE '%error occurred while evaluating the password%'"
+        ]
+    },
+    {
+        "title": "SQL Server - Any failed login for SA account (generic)",
+        "id": "sql-fail-sa-generic-004",
+        "status": "experimental",
+        "description": "Detects any failed login for 'sa' regardless of IP or reason",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%Login failed for user %sa%'"
+        ]
+    },
+    {
+        "title": "CredGuard - HypervisorPlatform disabled via UpdateName",
+        "id": "credguard-updatename-001",
+        "status": "stable",
+        "description": "Detects UpdateName='HypervisorPlatform' with PackageIdentifier containing 'Disabled'",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=9 OR EventID=10) AND UpdateName='HypervisorPlatform' AND PackageIdentifier LIKE '%Disabled%'"
+        ]
+    },
+    {
+        "title": "CredGuard - VirtualMachinePlatform disabled",
+        "id": "credguard-vmplatform-002",
+        "status": "stable",
+        "description": "Detects UpdateName='VirtualMachinePlatform' with Disabled",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=7 OR EventID=8) AND UpdateName='VirtualMachinePlatform' AND PackageIdentifier LIKE '%Disabled%'"
+        ]
+    },
+    {
+        "title": "CredGuard - WSL disabled (Microsoft-Windows-Subsystem-Linux)",
+        "id": "credguard-wsl-003",
+        "status": "experimental",
+        "description": "Detects UpdateName='Microsoft-Windows-Subsystem-Linux'",
+        "author": "Security Team",
+        "tags": ["attack.defense_evasion"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=7 OR EventID=8) AND UpdateName='Microsoft-Windows-Subsystem-Linux'"
+        ]
+    },
+    {
+        "title": "CredGuard - Defender definitions change",
+        "id": "credguard-defender-004",
+        "status": "experimental",
+        "description": "Detects UpdateName='Windows-Defender-Default-Definitions'",
+        "author": "Security Team",
+        "tags": [],
+        "falsepositives": ["Windows updates"],
+        "level": "low",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=8 OR EventID=10) AND UpdateName='Windows-Defender-Default-Definitions'"
+        ]
+    }
+]

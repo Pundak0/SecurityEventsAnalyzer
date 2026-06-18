@@ -1,0 +1,521 @@
+[
+    {
+        "title": "SQL Server SA Account Brute Force Attack",
+        "id": "sql-sa-brute-force-001",
+        "status": "stable",
+        "description": "Detects multiple failed login attempts for SA account",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110", "sql-server"],
+        "falsepositives": ["Legitimate admin forgetting password"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%sa%' AND Message LIKE '%Password did not match%'"
+        ]
+    },
+    {
+        "title": "SQL Server Failed SA Login from Known Malicious IP",
+        "id": "sql-sa-failed-malicious-ip-002",
+        "status": "stable",
+        "description": "Detects failed SA login from IP 10.23.23.9",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110", "sql-server"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%10.23.23.9%' AND Message LIKE '%Password did not match%'"
+        ]
+    },
+    {
+        "title": "SQL Server Failed Login - Multiple Attempts",
+        "id": "sql-failed-login-001",
+        "status": "stable",
+        "description": "Detects multiple failed SQL Server login attempts from same IP",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110", "sql-server"],
+        "falsepositives": ["Legitimate user mistakes", "Application misconfiguration"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=18456 AND Message LIKE '%unexisting-user%' AND Message LIKE '%10.23.23.9%'"
+        ]
+    },
+    {
+        "title": "SQL Server SQL Auth Attempt - Windows Auth Only",
+        "id": "sql-sql-auth-attempt-002",
+        "status": "stable",
+        "description": "Detects attempt to use SQL authentication when server requires Windows authentication",
+        "author": "Security Team",
+        "tags": ["attack.t1110", "sql-server"],
+        "falsepositives": ["Legitimate misconfiguration testing"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=18456 AND Message LIKE '%Windows authentication only%'"
+        ]
+    },
+    {
+        "title": "SQL Server Failed Login - Brute Force Pattern",
+        "id": "sql-failed-login-brute-003",
+        "status": "experimental",
+        "description": "Detects 5+ failed logins within 10 seconds from same IP",
+        "author": "Security Team",
+        "tags": ["attack.bruteforce", "attack.t1110"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=18456 AND Message LIKE '%10.23.23.9%' GROUP BY Computer HAVING COUNT(*) >= 5"
+        ]
+    },
+    {
+        "title": "SQL Server Server Audit Specification Disabled",
+        "id": "sql-srv-audit-spec-disabled-001",
+        "status": "stable",
+        "description": "Detects when server audit specification is disabled",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Legitimate audit maintenance"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%SERVER AUDIT SPECIFICATION%' AND Message LIKE '%STATE = OFF%'"
+        ]
+    },
+    {
+        "title": "SQL Server Server Audit Specification Deleted",
+        "id": "sql-srv-audit-spec-deleted-001",
+        "status": "stable",
+        "description": "Detects when server audit specification is dropped/deleted",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Legitimate audit maintenance"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%DROP SERVER AUDIT SPECIFICATION%'"
+        ]
+    },
+    {
+        "title": "SQL Server Server Audit Deleted",
+        "id": "sql-srv-audit-deleted-001",
+        "status": "stable",
+        "description": "Detects when server audit is dropped/deleted",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Legitimate audit maintenance"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%DROP SERVER AUDIT%'"
+        ]
+    },
+    {
+        "title": "SQL Server Server Audit Destroyed",
+        "id": "sql-srv-audit-destroyed-002",
+        "status": "stable",
+        "description": "Detects when server audit object is destroyed",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%destroyed%'"
+        ]
+    },
+    {
+        "title": "SQL Server SA Account Enabled",
+        "id": "sql-sa-enabled-001",
+        "status": "stable",
+        "description": "Detects when SQL Server SA account is enabled",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.privilege-escalation", "attack.t1078", "sql-server"],
+        "falsepositives": ["Legitimate emergency access", "Recovery procedures"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ALTER LOGIN [sa] ENABLE%'"
+        ]
+    },
+    {
+        "title": "SA Account Enable by admmig",
+        "id": "sql-sa-enabled-admmig-002",
+        "status": "stable",
+        "description": "Detects SA enabled by OFFSEC\\admmig user - known compromised account",
+        "author": "Security Team",
+        "tags": ["attack.persistence", "attack.privilege-escalation", "sql-server"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%admmig%' AND Message LIKE '%sa%' AND Message LIKE '%ENABLE%'"
+        ]
+    },
+    {
+        "title": "SQL Server Database Audit Disabled",
+        "id": "sql-db-audit-disabled-001",
+        "status": "stable",
+        "description": "Detects when database audit specification is disabled",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Legitimate audit maintenance"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%ALTER DATABASE AUDIT SPECIFICATION%' AND Message LIKE '%STATE = OFF%'"
+        ]
+    },
+    {
+        "title": "Database Audit Tampering in Specific DB",
+        "id": "sql-db-audit-tampering-002",
+        "status": "stable",
+        "description": "Detects audit tampering in RCS-TEST-db database",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%RCS-TEST-db%' AND Message LIKE '%STATE = OFF%'"
+        ]
+    },
+    {
+        "title": "SQL Server Database Audit Deleted",
+        "id": "sql-db-audit-deleted-001",
+        "status": "stable",
+        "description": "Detects when database audit specification is deleted",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Legitimate audit maintenance"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%DROP DATABASE AUDIT SPECIFICATION%'"
+        ]
+    },
+    {
+        "title": "Complete Database Audit Tampering Chain",
+        "id": "sql-db-audit-tampering-003",
+        "status": "stable",
+        "description": "Detects complete database audit tampering chain",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND (Message LIKE '%STATE = OFF%' OR Message LIKE '%DROP DATABASE AUDIT SPECIFICATION%')"
+        ]
+    },
+    {
+        "title": "BitLocker Encryption - Any Channel",
+        "id": "bitlocker-encryption-002",
+        "status": "stable",
+        "description": "Detects BitLocker encryption events regardless of channel.",
+        "author": "Security Team",
+        "tags": ["attack.impact", "attack.t1486"],
+        "falsepositives": ["Legitimate BitLocker activation"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID IN (4122, 840, 817, 796, 793, 780, 775, 768)"
+        ],
+        "filename": "",
+        "eventid": [4122, 840, 817, 796, 793, 780, 775, 768]
+    },
+    {
+        "title": "Defender Health Check - Baseline (All Enabled)",
+        "id": "defender-baseline-001",
+        "status": "stable",
+        "description": "Baseline detection for fully enabled Windows Defender",
+        "author": "Security Team",
+        "tags": ["baseline", "compliance"],
+        "falsepositives": [],
+        "level": "informational",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=1151 AND RTPstate='%%901' AND OAstate='%%901' AND IOAVstate='%%901' AND BMstate='%%901'"
+        ]
+    },
+    {
+        "title": "Defender Never Performed Full Scan - Warning",
+        "id": "defender-no-full-scan-002",
+        "status": "stable",
+        "description": "System has never completed a full Defender scan - may be new or security gap",
+        "author": "Security Team",
+        "tags": ["discovery", "compliance"],
+        "falsepositives": ["New installations", "Limited storage devices"],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=1151 AND Lastfullscanage='4294967295'"
+        ]
+    },
+    {
+        "title": "Defender Outdated Signatures - Warning",
+        "id": "defender-outdated-003",
+        "status": "stable",
+        "description": "Defender signatures are more than 7 days old",
+        "author": "Security Team",
+        "tags": ["defense-evasion"],
+        "falsepositives": ["Air-gapped networks", "Limited internet"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=1151 AND (CAST(LastAVsecurityintelligenceage AS INTEGER) > 7 OR CAST(LastASsecurityintelligenceage AS INTEGER) > 7)"
+        ]
+    },
+    {
+        "title": "Defender Real-Time Protection Disabled - CRITICAL",
+        "id": "defender-rtp-disabled-004",
+        "status": "stable",
+        "description": "Real-time protection is disabled - security tool tampering detected",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Admin maintenance", "Third-party AV installation"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=1151 AND RTPstate!='%%901'"
+        ]
+    },
+    {
+        "title": "Defender Any Component Disabled",
+        "id": "defender-component-disabled-005",
+        "status": "stable",
+        "description": "One or more Defender components are disabled",
+        "author": "Security Team",
+        "tags": ["defense-evasion"],
+        "falsepositives": [],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=1151 AND (RTPstate!='%%901' OR OAstate!='%%901' OR IOAVstate!='%%901' OR BMstate!='%%901')"
+        ]
+    },
+    {
+        "title": "Defender Product Status Anomaly",
+        "id": "defender-status-anomaly-006",
+        "status": "experimental",
+        "description": "Unusual Defender product status code",
+        "author": "Security Team",
+        "tags": ["anomaly"],
+        "falsepositives": [],
+        "level": "medium",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=1151 AND Productstatus NOT IN ('0x00080000', '0x00080060', '0x00080080')"
+        ]
+    },
+    {
+        "title": "SQL Server xp_cmdshell Enabled - Critical",
+        "id": "sql-xp-cmdshell-001",
+        "status": "stable",
+        "description": "Detects when xp_cmdshell is enabled in MS SQL Server",
+        "author": "Security Team",
+        "tags": ["attack.execution", "attack.t1059", "sql-server"],
+        "falsepositives": ["Legitimate DBA actions"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=15457 AND Message LIKE '%xp_cmdshell%' AND Message LIKE '%1%'"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [15457]
+    },
+    {
+        "title": "SQL Server RECONFIGURE Applied",
+        "id": "sql-reconfigure-002",
+        "status": "stable",
+        "description": "Detects RECONFIGURE statement execution to apply configuration changes",
+        "author": "Security Team",
+        "tags": ["attack.execution", "sql-server"],
+        "falsepositives": ["Legitimate SQL reconfiguration"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%RECONFIGURE%' AND Message LIKE '%ALST%'"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [33205]
+    },
+    {
+        "title": "Complete xp_cmdshell Attack Chain",
+        "id": "sql-xp-cmdshell-chain-004",
+        "status": "stable",
+        "description": "Detects full attack chain: xp_cmdshell enabled + RECONFIGURE",
+        "author": "Security Team",
+        "tags": ["attack.execution", "attack.t1059"],
+        "falsepositives": ["Legitimate SQL changes"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=15457 AND Message LIKE '%xp_cmdshell%' AND Message LIKE '%1%') OR (EventID=33205 AND Message LIKE '%RECONFIGURE%' AND Message LIKE '%ALST%')"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [15457, 33205]
+    },
+    {
+        "title": "xp_cmdshell Change by Domain User in master DB",
+        "id": "sql-xp-cmdshell-domain-master-008",
+        "status": "stable",
+        "description": "Detects xp_cmdshell configuration change in master database by domain user - high confidence IOC",
+        "author": "Security Team",
+        "tags": ["attack.execution", "sql-server"],
+        "falsepositives": ["Legitimate DBA work"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%database_name:master%' AND Message LIKE '%action_id:ALST%' AND Message LIKE '%session_server_principal_name:%\\\\%'"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [33205]
+    },
+    {
+        "title": "SQL Server CLR Enabled - Lateral Movement",
+        "id": "sql-clr-enabled-001",
+        "status": "stable",
+        "description": "Detects CLR enablement in SQL Server, used for lateral movement and backdoors",
+        "author": "Security Team",
+        "tags": ["attack.lateral-movement", "attack.t1059"],
+        "falsepositives": ["Legitimate application needs"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=15457 AND Message LIKE '%clr enabled%1%'"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [15457]
+    },
+    {
+        "title": "SQL Server Advanced Options + CLR Chain",
+        "id": "sql-clr-chain-003",
+        "status": "stable",
+        "description": "Detects complete CLR enablement attack chain",
+        "author": "Security Team",
+        "tags": ["attack.lateral-movement"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=15457 AND (Message LIKE '%show advanced options%1%' OR Message LIKE '%clr enabled%1%')"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [15457]
+    },
+    {
+        "title": "Print Spooler Driver Installation - Mimispool/PrintNightmare",
+        "id": "print-spooler-driver-001",
+        "status": "stable",
+        "description": "Detects print driver installation via Print Spooler, potentially Mimispool or PrintNightmare exploitation",
+        "author": "Security Team",
+        "tags": ["attack.privilege-escalation", "attack.t1068", "attack.lateral-movement", "printnightmare"],
+        "falsepositives": ["Legitimate printer driver installations", "IT deployments"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID IN (316, 300, 301, 823, 848, 849)"
+        ],
+        "filename": "",
+        "channel": ["Microsoft-Windows-PrintService/Operational", "Microsoft-Windows-PrintService/Admin"],
+        "eventid": [316, 300, 301, 823, 848, 849]
+    },
+    {
+        "title": "Printer FILE: Redirection - Data Exfiltration",
+        "id": "printer-file-redirect-002",
+        "status": "stable",
+        "description": "Detects print redirection to FILE: which can be used for data exfiltration",
+        "author": "Security Team",
+        "tags": ["attack.exfiltration", "attack.t1025"],
+        "falsepositives": ["Legitimate 'Print to PDF' functionality"],
+        "level": "high",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=823 AND NewDefaultPrinter LIKE '%FILE:%'"
+        ],
+        "filename": "",
+        "channel": ["Microsoft-Windows-PrintService/Admin"],
+        "eventid": [823]
+    },
+    {
+        "title": "Printer Driver Installation by Non-Admin",
+        "id": "print-driver-non-admin-003",
+        "status": "experimental",
+        "description": "Detects printer driver installation by non-privileged user - suspicious for PrintNightmare",
+        "author": "Security Team",
+        "tags": ["attack.privilege-escalation"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=300 AND UserID != 'S-1-5-18' AND UserID != 'S-1-5-19' AND UserID != 'S-1-5-20'"
+        ],
+        "filename": "",
+        "channel": ["Microsoft-Windows-PrintService/Operational"],
+        "eventid": [300]
+    },
+    {
+        "title": "NTDS.DIT Access from Suspicious Path - Credential Access",
+        "id": "ntds-suspicious-path-001",
+        "status": "stable",
+        "description": "Detects access to NTDS.DIT (AD database) from suspicious location like c:\\hacker, c:\\temp, etc.",
+        "author": "Security Team",
+        "tags": ["attack.credential-access", "attack.t1003.003"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=325 OR EventID=327) AND Message LIKE '%c:\\\\hacker\\\\%'"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [325, 327]
+    },
+    {
+        "title": "NTDS.DIT Copied via Volume Shadow Copy",
+        "id": "ntds-vss-copy-002",
+        "status": "stable",
+        "description": "Detects NTDS.DIT copy via Volume Shadow Copy (VSS) for credential dumping",
+        "author": "Security Team",
+        "tags": ["attack.credential-access", "attack.t1003.003"],
+        "falsepositives": ["Legitimate backup software"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=216 AND Message LIKE '%HarddiskVolumeShadowCopy%' AND Message LIKE '%ntds.dit%'"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [216]
+    },
+    {
+        "title": "Complete NTDS.DIT Dump Chain",
+        "id": "ntds-dump-chain-003",
+        "status": "stable",
+        "description": "Detects complete attack chain: VSS snapshot + NTDS access from suspicious path",
+        "author": "Security Team",
+        "tags": ["attack.credential-access", "attack.t1003.003"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE (EventID=216 AND Message LIKE '%ntds.dit%') OR (EventID IN (325,327) AND Message LIKE '%c:\\\\hacker\\\\%')"
+        ],
+        "filename": "",
+        "channel": ["Application"],
+        "eventid": [216, 325, 327]
+    },
+    {
+        "title": "SQL Server Audit Disabled - Defense Evasion",
+        "id": "sql-audit-disabled-001",
+        "status": "stable",
+        "description": "Detects when SQL Server audit is disabled",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": ["Legitimate audit maintenance"],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%STATE = OFF%'"
+        ]
+    },
+    {
+        "title": "SQL Server Audit Destroyed - Evidence Cleanup",
+        "id": "sql-audit-destroyed-002",
+        "status": "stable",
+        "description": "Detects when SQL Server audit object is destroyed",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion", "attack.t1562.001"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND Message LIKE '%destroyed%'"
+        ]
+    },
+    {
+        "title": "Complete SQL Server Audit Tampering Chain",
+        "id": "sql-audit-tampering-chain-003",
+        "status": "stable",
+        "description": "Detects complete audit tampering chain",
+        "author": "Security Team",
+        "tags": ["attack.defense-evasion"],
+        "falsepositives": [],
+        "level": "critical",
+        "rule": [
+            "SELECT * FROM logs WHERE EventID=33205 AND (Message LIKE '%STATE = OFF%' OR Message LIKE '%destroyed%' OR Message LIKE '%LGIS%')"
+        ]
+    }
+]

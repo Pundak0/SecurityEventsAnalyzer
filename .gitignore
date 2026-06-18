@@ -1,0 +1,86 @@
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+TODO
+detected_events.json
+results
+tmp
+*.log
+*.evtx
+*.evtx_data
+*.tar
+*.tar.sha256
+.pdm-python
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+
+# pycache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pyzw
+
+# Python virtual environments & cache 
+.venv/
+venv/
+.env
+*.log
+pdm.lock
+pyproject.toml
+Makefile*
+build/
+gui_dev/
+helpers/
+Taskfile.dev.yml
+# Default files for Editors and IDEs (vscode, cursor, idea, zed, sublime, etc.)
+.vscode/*
+.cursor/*
+.cursorrules
+.zed/*
+*.sublime-workspace
+*.sublime-project
+CLAUDE.md
+
+coverage/
+htmlcov/
+*.lcov
+
+.tmp/
+.temp/
+tests/external
+*coverage*
+
+# PyInstaller
+dist/

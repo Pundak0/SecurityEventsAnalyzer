@@ -1,0 +1,569 @@
+[
+  {
+    "title": "Addition of SID History to Active Directory Object",
+    "id": "2632954e-db1c-49cb-9936-67d1ef1d17d2",
+    "description": "An attacker can use the SID history attribute to gain additional privileges.",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID IN (4738,4765,4766) AND EventID = 4765 OR EventID = 4766 AND EventID = 4738 AND SidHistory LIKE '%-%' OR SidHistory LIKE '%\\%\\%1793%' AND NOT (SidHistory != None)"
+    ]
+  },
+  {
+    "title": "Potential Credential Dumping Activity Via LSASS",
+    "id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+    "description": "Detects process access requests to the LSASS process with specific call trace calls and access masks.\nThis behaviour is expressed by many credential dumping tools such as Mimikatz, NanoDump, Invoke-Mimikatz, Procdump and even the Taskmgr dumping feature.\n",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=10 AND TargetImage LIKE '%\\\\lsass.exe' AND GrantedAccess LIKE '%0x1038%' OR GrantedAccess LIKE '%0x1438%' OR GrantedAccess LIKE '%0x143a%' OR GrantedAccess LIKE '%0x1fffff%' AND CallTrace LIKE '%dbgcore.dll%' OR CallTrace LIKE '%dbghelp.dll%' OR CallTrace LIKE '%kernel32.dll%' OR CallTrace LIKE '%kernelbase.dll%' OR CallTrace LIKE '%ntdll.dll%' AND NOT (SourceUser NOT LIKE '%AUTHORI%' OR SourceUser NOT LIKE '%AUTORI%') AND NOT (CallTrace NOT LIKE '%:\\\\Windows\\\\Temp\\\\asgard2-agent\\\\%' OR CallTrace NOT LIKE '%\\\\thor\\\\thor64.exe+%' OR CallTrace NOT LIKE '%|UNKNOWN(%') AND NOT (GrantedAccess NOT LIKE '%0x103800%') AND NOT (SourceImage NOT LIKE '%:\\\\Windows\\\\Sysmon64.exe')"
+    ]
+  },
+  {
+    "title": "Remote LSASS Process Access Through Windows Remote Management",
+    "id": "aa35a627-33fb-4d04-a165-d33b4afca3e8",
+    "description": "Detects remote access to the LSASS process via WinRM. This could be a sign of credential dumping from tools like mimikatz.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=10 AND TargetImage LIKE '%\\\\lsass.exe' AND SourceImage LIKE '%:\\\\Windows\\\\system32\\\\wsmprovhost.exe' AND NOT (GrantedAccess NOT LIKE '%0x80000000%')"
+    ]
+  },
+  {
+    "title": "Suspicious Process Access to LSASS with Dbgcore/Dbghelp DLLs",
+    "id": "9f5c1d59-33be-4e60-bcab-85d2f566effd",
+    "description": "Detects suspicious process access to LSASS.exe from processes located in uncommon locations with dbgcore.dll or dbghelp.dll in the call trace.\nThese DLLs contain functions like MiniDumpWriteDump that can be abused for credential dumping purposes. While modern tools like Mimikatz have moved to using ntdll.dll,\ndbgcore.dll and dbghelp.dll are still used by basic credential dumping utilities and legacy tools for LSASS memory access and process suspension techniques.\n",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=10 AND TargetImage LIKE '%\\\\lsass.exe' AND CallTrace LIKE '%dbgcore.dll%' OR CallTrace LIKE '%dbghelp.dll%' AND SourceImage LIKE '%:\\\\Perflogs\\\\%' OR SourceImage LIKE '%:\\\\Temp\\\\%' OR SourceImage LIKE '%:\\\\Users\\\\Public\\\\%' OR SourceImage LIKE '%\\\\$Recycle.Bin\\\\%' OR SourceImage LIKE '%\\\\AppData\\\\Roaming\\\\%' OR SourceImage LIKE '%\\\\Contacts\\\\%' OR SourceImage LIKE '%\\\\Desktop\\\\%' OR SourceImage LIKE '%\\\\Documents\\\\%' OR SourceImage LIKE '%\\\\Downloads\\\\%' OR SourceImage LIKE '%\\\\Favorites\\\\%' OR SourceImage LIKE '%\\\\Favourites\\\\%' OR SourceImage LIKE '%\\\\inetpub\\\\wwwroot\\\\%' OR SourceImage LIKE '%\\\\Music\\\\%' OR SourceImage LIKE '%\\\\Pictures\\\\%' OR SourceImage LIKE '%\\\\Start Menu\\\\Programs\\\\Startup\\\\%' OR SourceImage LIKE '%\\\\Users\\\\Default\\\\%' OR SourceImage LIKE '%\\\\Videos\\\\%' OR SourceImage LIKE '%\\\\Windows\\\\Temp\\\\%'"
+    ]
+  },
+  {
+    "title": "Wmiprvse Wbemcomn DLL Hijack",
+    "id": "7707a579-e0d8-4886-a853-ce47e4575aaa",
+    "description": "Detects a threat actor creating a file named `wbemcomn.dll` in the `C:\\Windows\\System32\\wbem\\` directory over the network and loading it for a WMI DLL Hijack scenario.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=7 AND Image LIKE '%\\\\wmiprvse.exe' AND ImageLoaded LIKE '%\\\\wbem\\\\wbemcomn.dll'"
+    ]
+  },
+  {
+    "title": "HackTool - Wmiexec Default Powershell Command",
+    "id": "022eaba8-f0bf-4dd9-9217-4604b0bb3bb0",
+    "description": "Detects the execution of PowerShell with a specific flag sequence that is used by the Wmiexec script",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND CommandLine LIKE '%-NoP -NoL -sta -NonI -W Hidden -Exec Bypass -Enc%'"
+    ]
+  },
+  {
+    "title": "WmiPrvSE Spawned A Process",
+    "id": "d21374ff-f574-44a7-9998-4a8c8bf33d7d",
+    "description": "Detects WmiPrvSE spawning a process",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND ParentImage LIKE '%\\\\WmiPrvSe.exe' AND NOT (LogonId NOT LIKE '%0x3e7%' OR LogonId NOT LIKE '%null%') AND NOT (User NOT LIKE '%AUTHORI%' OR User NOT LIKE '%AUTORI%') AND NOT (Image NOT LIKE '%\\\\WmiPrvSE.exe') AND NOT (Image NOT LIKE '%\\\\WerFault.exe') AND NOT (LogonId != None)"
+    ]
+  },
+  {
+    "title": "New Service Creation Using Sc.EXE",
+    "id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+    "description": "Detects the creation of a new service using the \"sc.exe\" utility.",
+    "level": "low",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\sc.exe' AND CommandLine LIKE '%create%' OR CommandLine LIKE '%binPath%' AND NOT (ParentImage NOT LIKE 'C:\\\\Program Files (x86)\\\\Dropbox\\\\Client\\\\%' OR ParentImage NOT LIKE 'C:\\\\Program Files\\\\Dropbox\\\\Client\\\\%') AND NOT (ParentImage NOT LIKE '%\\\\Dropbox.exe')"
+    ]
+  },
+  {
+    "title": "Service Registry Key Deleted Via Reg.EXE",
+    "id": "05b2aa93-1210-42c8-8d9a-2fcc13b284f5",
+    "description": "Detects execution of \"reg.exe\" commands with the \"delete\" flag on services registry key. Often used by attacker to remove AV software services",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%reg.exe' AND OriginalFileName LIKE '%reg.exe%' AND CommandLine LIKE '% delete %' AND CommandLine LIKE '%\\\\SYSTEM\\\\CurrentControlSet\\\\services\\\\%'"
+    ]
+  },
+  {
+    "title": "Service DACL Abuse To Hide Services Via Sc.EXE",
+    "id": "a537cfc3-4297-4789-92b5-345bfd845ad0",
+    "description": "Detects usage of the \"sc.exe\" utility adding a new service with special permission seen used by threat actors which makes the service hidden and unremovable.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\sc.exe' AND OriginalFileName LIKE '%sc.exe%' AND CommandLine LIKE '%sdset%' OR CommandLine LIKE '%DCLCWPDTSD%'"
+    ]
+  },
+  {
+    "title": "Netsh Allow Group Policy on Microsoft Defender Firewall",
+    "id": "347906f3-e207-4d18-ae5b-a9403d6bcdef",
+    "description": "Adversaries may modify system firewalls in order to bypass controls limiting network usage",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\netsh.exe' AND OriginalFileName LIKE '%netsh.exe%' AND CommandLine LIKE '%advfirewall%' OR CommandLine LIKE '%firewall%' OR CommandLine LIKE '%set%' OR CommandLine LIKE '%rule%' OR CommandLine LIKE '%group=%' OR CommandLine LIKE '%new%' OR CommandLine LIKE '%enable=Yes%'"
+    ]
+  },
+  {
+    "title": "Microsoft Defender Blocked from Loading Unsigned DLL",
+    "id": "0b0ea3cc-99c8-4730-9c53-45deee2a4c86",
+    "description": "Detects Code Integrity (CI) engine blocking Microsoft Defender's processes (MpCmdRun and NisSrv) from loading unsigned DLLs which may be an attempt to sideload arbitrary DLL",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID IN (11,12) AND EventID = 11 OR EventID = 12 AND ProcessPath LIKE '%\\\\MpCmdRun.exe' OR ProcessPath LIKE '%\\\\NisSrv.exe'"
+    ]
+  },
+  {
+    "title": "Microsoft Defender Tamper Protection Trigger",
+    "id": "49e5bc24-8b86-49f1-b743-535f332c2856",
+    "description": "Detects blocked attempts to change any of Defender's settings such as \"Real Time Monitoring\" and \"Behavior Monitoring\"",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Windows Defender/Operational' AND EventID=5013 AND EventID = 5013 AND Value LIKE '%\\\\Windows Defender\\\\DisableAntiSpyware' OR Value LIKE '%\\\\Windows Defender\\\\DisableAntiVirus' OR Value LIKE '%\\\\Windows Defender\\\\Scan\\\\DisableArchiveScanning' OR Value LIKE '%\\\\Windows Defender\\\\Scan\\\\DisableScanningNetworkFiles' OR Value LIKE '%\\\\Real-Time Protection\\\\DisableRealtimeMonitoring' OR Value LIKE '%\\\\Real-Time Protection\\\\DisableBehaviorMonitoring' OR Value LIKE '%\\\\Real-Time Protection\\\\DisableIOAVProtection' OR Value LIKE '%\\\\Real-Time Protection\\\\DisableScriptScanning'"
+    ]
+  },
+  {
+    "title": "New Service Creation Using PowerShell",
+    "id": "c02e96b7-c63a-4c47-bd83-4a9f74afcfb2",
+    "description": "Detects the creation of a new service using powershell.",
+    "level": "low",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND CommandLine LIKE '%New-Service%' OR CommandLine LIKE '%-BinaryPathName%'"
+    ]
+  },
+  {
+    "title": "SafeBoot Registry Key Deleted Via Reg.EXE",
+    "id": "fc0e89b5-adb0-43c1-b749-c12a10ec37de",
+    "description": "Detects execution of \"reg.exe\" commands with the \"delete\" flag on safe boot registry keys. Often used by attacker to prevent safeboot execution of security products",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%reg.exe' AND OriginalFileName LIKE '%reg.exe%' AND CommandLine LIKE '% delete %' OR CommandLine LIKE '%\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\SafeBoot%'"
+    ]
+  },
+  {
+    "title": "Potential Suspicious Registry File Imported Via Reg.EXE",
+    "id": "62e0298b-e994-4189-bc87-bc699aa62d97",
+    "description": "Detects the import of '.reg' files from suspicious paths using the 'reg.exe' utility",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\reg.exe' AND OriginalFileName LIKE '%reg.exe%' AND CommandLine LIKE '% import %' AND CommandLine LIKE '%C:\\\\Users\\\\%' OR CommandLine LIKE '%\\%temp\\%%' OR CommandLine LIKE '%\\%tmp\\%%' OR CommandLine LIKE '%\\%appdata\\%%' OR CommandLine LIKE '%\\\\AppData\\\\Local\\\\Temp\\\\%' OR CommandLine LIKE '%C:\\\\Windows\\\\Temp\\\\%' OR CommandLine LIKE '%C:\\\\ProgramData\\\\%'"
+    ]
+  },
+  {
+    "title": "MSSQL Server Failed Logon",
+    "id": "218d2855-2bba-4f61-9c85-81d0ea63ac71",
+    "description": "Detects failed logon attempts from clients to MSSQL server.",
+    "level": "low",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Application' AND EventID=18456 AND Provider_Name LIKE '%MSSQL%' AND EventID = 18456"
+    ]
+  },
+  {
+    "title": "MSSQL Server Failed Logon From External Network",
+    "id": "ebfe73c2-5bc9-4ed9-aaa8-8b54b2b4777d",
+    "description": "Detects failed logon attempts from clients with external network IP to an MSSQL server. This can be a sign of a bruteforce attack.",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Application' AND EventID=18456 AND Provider_Name LIKE '%MSSQL%' AND EventID = 18456 AND NOT (Data NOT LIKE '%CLIENT: 10.%' OR Data NOT LIKE '%CLIENT: 172.16.%' OR Data NOT LIKE '%CLIENT: 172.17.%' OR Data NOT LIKE '%CLIENT: 172.18.%' OR Data NOT LIKE '%CLIENT: 172.19.%' OR Data NOT LIKE '%CLIENT: 172.20.%' OR Data NOT LIKE '%CLIENT: 172.21.%' OR Data NOT LIKE '%CLIENT: 172.22.%' OR Data NOT LIKE '%CLIENT: 172.23.%' OR Data NOT LIKE '%CLIENT: 172.24.%' OR Data NOT LIKE '%CLIENT: 172.25.%' OR Data NOT LIKE '%CLIENT: 172.26.%' OR Data NOT LIKE '%CLIENT: 172.27.%' OR Data NOT LIKE '%CLIENT: 172.28.%' OR Data NOT LIKE '%CLIENT: 172.29.%' OR Data NOT LIKE '%CLIENT: 172.30.%' OR Data NOT LIKE '%CLIENT: 172.31.%' OR Data NOT LIKE '%CLIENT: 192.168.%' OR Data NOT LIKE '%CLIENT: 127.%' OR Data NOT LIKE '%CLIENT: 169.254.%' OR Data NOT LIKE '%CLIENT: <local machine>%')"
+    ]
+  },
+  {
+    "title": "MSSQL Add Account To Sysadmin Role",
+    "id": "08200f85-2678-463e-9c32-88dce2f073d1",
+    "description": "Detects when an attacker tries to backdoor the MSSQL server by adding a backdoor account to the sysadmin fixed server role",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Application' AND EventID=33205 AND Provider_Name LIKE '%MSSQL%' AND EventID = 33205 AND Data LIKE '%object\\_name:sysadmin%' OR Data LIKE '%statement:alter server role [sysadmin] add member %'"
+    ]
+  },
+  {
+    "title": "New Firewall Rule Added Via Netsh.EXE",
+    "id": "cd5cfd80-aa5f-44c0-9c20-108c4ae12e3c",
+    "description": "Detects the addition of a new rule to the Windows firewall via netsh",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\netsh.exe' AND OriginalFileName LIKE '%netsh.exe%' AND CommandLine LIKE '% firewall %' OR CommandLine LIKE '% add %' AND NOT (CommandLine NOT LIKE '%advfirewall firewall add rule name=Dropbox dir=in action=allow \"program=?:\\\\Program Files (x86)\\\\Dropbox\\\\Client\\\\Dropbox.exe\" enable=yes profile=Any%' OR CommandLine NOT LIKE '%advfirewall firewall add rule name=Dropbox dir=in action=allow \"program=?:\\\\Program Files\\\\Dropbox\\\\Client\\\\Dropbox.exe\" enable=yes profile=Any%')"
+    ]
+  },
+  {
+    "title": "Firewall Rule Deleted Via Netsh.EXE",
+    "id": "1a5fefe6-734f-452e-a07d-fc1c35bce4b2",
+    "description": "Detects the removal of a port or application rule in the Windows Firewall configuration using netsh",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\netsh.exe' AND OriginalFileName LIKE '%netsh.exe%' AND CommandLine LIKE '%firewall%' OR CommandLine LIKE '%delete %' AND NOT (ParentImage NOT LIKE '%\\\\Dropbox.exe') AND NOT (CommandLine NOT LIKE '%name=Dropbox%') AND NOT (ParentImage NOT LIKE '%\\\\instup.exe') AND NOT (CommandLine NOT LIKE '%advfirewall firewall delete rule name=\"Avast Antivirus Admin Client\"%')"
+    ]
+  },
+  {
+    "title": "Firewall Rule Update Via Netsh.EXE",
+    "id": "a70dcb37-3bee-453a-99df-d0c683151be6",
+    "description": "Detects execution of netsh with the \"advfirewall\" and the \"set\" option in order to set new values for properties of a existing rule",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\netsh.exe' AND OriginalFileName LIKE '%netsh.exe%' AND CommandLine LIKE '% firewall %' OR CommandLine LIKE '% set %'"
+    ]
+  },
+  {
+    "title": "New Firewall Rule Added In Windows Firewall Exception List Via WmiPrvSE.EXE",
+    "id": "eca81e8d-09e1-4d04-8614-c91f44fd0519",
+    "description": "Detects the addition of a new \"Allow\" firewall rule by the WMI process (WmiPrvSE.EXE).\nThis can occur if an attacker leverages PowerShell cmdlets such as \"New-NetFirewallRule\", or directly uses WMI CIM classes such as \"MSFT_NetFirewallRule\".\n",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID IN (2097,2004,2071) AND EventID = 2004 OR EventID = 2071 OR EventID = 2097 AND Action = 3 AND ModifyingApplication LIKE '%:\\\\Windows\\\\System32\\\\wbem\\\\WmiPrvSE.exe'"
+    ]
+  },
+  {
+    "title": "HackTool - Potential Remote Credential Dumping Activity Via CrackMapExec Or Impacket-Secretsdump",
+    "id": "6e2a900a-ced9-4e4a-a9c2-13e706f9518a",
+    "description": "Detects default filenames output from the execution of CrackMapExec and Impacket-secretsdump against an endpoint.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=11 AND Image LIKE '%\\\\svchost.exe' AND TargetFilename LIKE '%\\\\\\\\Windows\\\\\\\\System32\\\\\\\\[a-zA-Z0-9]{8}\\\\.tmp$%'"
+    ]
+  },
+  {
+    "title": "HackTool - CrackMapExec Execution",
+    "id": "42a993dd-bb3e-48c8-b372-4d6684c4106c",
+    "description": "This rule detect common flag combinations used by CrackMapExec in order to detect its use even if the binary has been replaced.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\crackmapexec.exe' AND CommandLine LIKE '% -M pe\\_inject %' AND CommandLine LIKE '% --local-auth%' OR CommandLine LIKE '% -u %' OR CommandLine LIKE '% -x %' AND CommandLine LIKE '% --local-auth%' OR CommandLine LIKE '% -u %' OR CommandLine LIKE '% -p %' OR CommandLine LIKE '% -H ''NTHASH''%' AND CommandLine LIKE '% mssql %' OR CommandLine LIKE '% -u %' OR CommandLine LIKE '% -p %' OR CommandLine LIKE '% -M %' OR CommandLine LIKE '% -d %' AND CommandLine LIKE '% smb %' OR CommandLine LIKE '% -u %' OR CommandLine LIKE '% -H %' OR CommandLine LIKE '% -M %' OR CommandLine LIKE '% -o %' AND CommandLine LIKE '% smb %' OR CommandLine LIKE '% -u %' OR CommandLine LIKE '% -p %' OR CommandLine LIKE '% --local-auth%'"
+    ]
+  },
+  {
+    "title": "HackTool - CrackMapExec Process Patterns",
+    "id": "f26307d8-14cd-47e3-a26b-4b4769f24af6",
+    "description": "Detects suspicious process patterns found in logs when CrackMapExec is used",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND (CommandLine LIKE '%tasklist /fi %' OR CommandLine LIKE '%Imagename eq lsass.exe%' OR CommandLine LIKE '%cmd.exe /c %' OR CommandLine LIKE '%cmd.exe /r %' OR CommandLine LIKE '%cmd.exe /k %' OR CommandLine LIKE '%cmd /c %' OR CommandLine LIKE '%cmd /r %' OR CommandLine LIKE '%cmd /k %' OR User LIKE '%AUTHORI%' OR User LIKE '%AUTORI%' OR CommandLine LIKE '%do rundll32.exe C:\\\\windows\\\\System32\\\\comsvcs.dll, MiniDump%' OR CommandLine LIKE '%\\\\Windows\\\\Temp\\\\%' OR CommandLine LIKE '% full%' OR CommandLine LIKE '%\\%\\%B%' OR CommandLine LIKE '%tasklist /v /fo csv%' OR CommandLine LIKE '%findstr /i \"lsass\"%')"
+    ]
+  },
+  {
+    "title": "Invocation of Active Directory Diagnostic Tool (ntdsutil.exe)",
+    "id": "2afafd61-6aae-4df4-baed-139fa1f4c345",
+    "description": "Detects execution of ntdsutil.exe, which can be used for various attacks against the NTDS database (NTDS.DIT)",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\ntdsutil.exe'"
+    ]
+  },
+  {
+    "title": "Ntdsutil Abuse",
+    "id": "e6e88853-5f20-4c4a-8d26-cd469fd8d31f",
+    "description": "Detects potential abuse of ntdsutil to dump ntds.dit database",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Application' AND EventID IN (216,325,326,327) AND Provider_Name LIKE '%ESENT%' AND EventID = 216 OR EventID = 325 OR EventID = 326 OR EventID = 327 AND Data LIKE '%ntds.dit%'"
+    ]
+  },
+  {
+    "title": "Dump Ntds.dit To Suspicious Location",
+    "id": "94dc4390-6b7c-4784-8ffc-335334404650",
+    "description": "Detects potential abuse of ntdsutil to dump ntds.dit database to a suspicious location",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Application' AND EventID=325 AND Provider_Name LIKE '%ESENT%' AND EventID = 325 AND Data LIKE '%ntds.dit%' AND Data LIKE '%:\\\\ntds.dit%' OR Data LIKE '%\\\\Appdata\\\\%' OR Data LIKE '%\\\\Desktop\\\\%' OR Data LIKE '%\\\\Downloads\\\\%' OR Data LIKE '%\\\\Perflogs\\\\%' OR Data LIKE '%\\\\Temp\\\\%' OR Data LIKE '%\\\\Users\\\\Public\\\\%'"
+    ]
+  },
+  {
+    "title": "Suspicious Spool Service Child Process",
+    "id": "dcdbc940-0bff-46b2-95f3-2d73f848e33b",
+    "description": "Detects suspicious print spool service (spoolsv.exe) child processes.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1"
+    ]
+  },
+  {
+    "title": "HackTool - CrackMapExec Execution Patterns",
+    "id": "058f4380-962d-40a5-afce-50207d36d7e2",
+    "description": "Detects various execution patterns of the CrackMapExec pentesting framework",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND CommandLine LIKE '%cmd.exe /Q /c * 1> \\\\\\\\\\\\\\\\*\\\\\\\\*\\\\\\\\* 2>&1%' OR CommandLine LIKE '%cmd.exe /C * > \\\\\\\\\\\\\\\\*\\\\\\\\*\\\\\\\\* 2>&1%' OR CommandLine LIKE '%cmd.exe /C * > *\\\\\\\\Temp\\\\\\\\* 2>&1%' OR CommandLine LIKE '%powershell.exe -exec bypass -noni -nop -w 1 -C \"%' OR CommandLine LIKE '%powershell.exe -noni -nop -w 1 -enc %'"
+    ]
+  },
+  {
+    "title": "Potential Credential Dumping Attempt Via PowerShell Remote Thread",
+    "id": "fb656378-f909-47c1-8747-278bf09f4f4f",
+    "description": "Detects remote thread creation by PowerShell processes into \"lsass.exe\"",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=8 AND SourceImage LIKE '%\\\\powershell.exe' OR SourceImage LIKE '%\\\\pwsh.exe' AND TargetImage LIKE '%\\\\lsass.exe'"
+    ]
+  },
+  {
+    "title": "Remote Thread Creation Via PowerShell In Uncommon Target",
+    "id": "99b97608-3e21-4bfe-8217-2a127c396a0e",
+    "description": "Detects the creation of a remote thread from a Powershell process in an uncommon target process",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=8 AND SourceImage LIKE '%\\\\powershell.exe' OR SourceImage LIKE '%\\\\pwsh.exe' AND TargetImage LIKE '%\\\\rundll32.exe' OR TargetImage LIKE '%\\\\regsvr32.exe'"
+    ]
+  },
+  {
+    "title": "PowerShell Core DLL Loaded By Non PowerShell Process",
+    "id": "092bc4b9-3d1d-43b4-a6b4-8c8acd83522f",
+    "description": "Detects loading of essential DLLs used by PowerShell by non-PowerShell process.\nDetects behavior similar to meterpreter's \"load powershell\" extension.\n",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=7 AND Description LIKE '%System.Management.Automation%' AND OriginalFileName LIKE '%System.Management.Automation.dll%' AND ImageLoaded LIKE '%\\\\System.Management.Automation.dll' OR ImageLoaded LIKE '%\\\\System.Management.Automation.ni.dll' AND NOT (Image NOT LIKE '%C:\\\\Program Files\\\\PowerShell\\\\7-preview\\\\pwsh.exe%' OR Image NOT LIKE '%C:\\\\Program Files\\\\PowerShell\\\\7\\\\pwsh.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell\\_ise.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\SysWOW64\\\\WindowsPowerShell\\\\v1.0\\\\powershell\\_ise.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\SysWOW64\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe%') AND NOT (Image NOT LIKE '%C:\\\\Program Files\\\\WindowsApps\\\\Microsoft.PowerShellPreview%' OR Image NOT LIKE '%\\\\AppData\\\\Local\\\\Microsoft\\\\WindowsApps\\\\Microsoft.PowerShellPreview%') AND NOT (Image NOT LIKE '%\\\\pwsh.exe') AND NOT (Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\dsac.exe%' OR Image NOT LIKE '%C:\\\\WINDOWS\\\\System32\\\\RemoteFXvGPUDisablement.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\runscripthelper.exe%' OR Image NOT LIKE '%C:\\\\WINDOWS\\\\System32\\\\sdiagnhost.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\ServerManager.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\SyncAppvPublishingServer.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\winrshost.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\wsmprovhost.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\SysWOW64\\\\winrshost.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\SysWOW64\\\\wsmprovhost.exe%') AND NOT (Image NOT LIKE 'C:\\\\Windows\\\\Microsoft.NET\\\\Framework\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\Microsoft.NET\\\\FrameworkArm\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\Microsoft.NET\\\\FrameworkArm64\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\%') AND NOT (Image NOT LIKE '%\\\\mscorsvw.exe') AND NOT (Image NOT LIKE 'C:\\\\Program Files (x86)\\\\Microsoft SQL Server Management Studio%' OR Image NOT LIKE 'C:\\\\Program Files\\\\Microsoft SQL Server Management Studio%') AND NOT (Image NOT LIKE '%\\\\IDE\\\\Ssms.exe') AND NOT (Image NOT LIKE 'C:\\\\Program Files (x86)\\\\Microsoft SQL Server\\\\%' OR Image NOT LIKE 'C:\\\\Program Files\\\\Microsoft SQL Server\\\\%') AND NOT (Image NOT LIKE '%\\\\Tools\\\\Binn\\\\SQLPS.exe') AND NOT (Image NOT LIKE '%\\\\Citrix\\\\ConfigSync\\\\ConfigSyncRun.exe') AND NOT (Image NOT LIKE 'C:\\\\Program Files (x86)\\\\Microsoft Visual Studio\\\\%' OR Image NOT LIKE 'C:\\\\Program Files\\\\Microsoft Visual Studio\\\\%') AND NOT (Image NOT LIKE 'C:\\\\ProgramData\\\\chocolatey\\\\choco.exe%') AND NOT (Image NOT LIKE 'C:\\\\Windows\\\\Temp\\\\asgard2-agent\\\\%') AND NOT (Image NOT LIKE '%\\\\thor64.exe' OR Image NOT LIKE '%\\\\thor.exe') AND NOT (Image != None)"
+    ]
+  },
+  {
+    "title": "Remote Thread Creation In Mstsc.Exe From Suspicious Location",
+    "id": "c0aac16a-b1e7-4330-bab0-3c27bb4987c7",
+    "description": "Detects remote thread creation in the \"mstsc.exe\" process by a process located in a potentially suspicious location.\nThis technique is often used by attackers in order to hook some APIs used by DLLs loaded by \"mstsc.exe\" during RDP authentications in order to steal credentials.\n",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=8 AND TargetImage LIKE '%\\\\mstsc.exe' AND SourceImage LIKE '%:\\\\Temp\\\\%' OR SourceImage LIKE '%:\\\\Users\\\\Public\\\\%' OR SourceImage LIKE '%:\\\\Windows\\\\PerfLogs\\\\%' OR SourceImage LIKE '%:\\\\Windows\\\\Tasks\\\\%' OR SourceImage LIKE '%:\\\\Windows\\\\Temp\\\\%' OR SourceImage LIKE '%\\\\AppData\\\\Local\\\\Temp\\\\%'"
+    ]
+  },
+  {
+    "title": "Potential AS-REP Roasting via Kerberos TGT Requests",
+    "id": "3e2f1b2c-4d5e-11ee-be56-0242ac120002",
+    "description": "Detects suspicious Kerberos TGT requests with pre-authentication disabled (Pre-Authentication Type = 0) and Ticket Encryption Type (0x17) i.e, RC4-HMAC.\nThis may indicate an AS-REP Roasting attack, where attackers request AS-REP messages for accounts without pre-authentication and attempt to crack the encrypted ticket offline to recover user passwords.\n",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=4768 AND EventID = 4768 AND TicketEncryptionType LIKE '%0x17%' AND ServiceName LIKE '%krbtgt%' AND PreAuthType = 0"
+    ]
+  },
+  {
+    "title": "Suspicious Kerberos Ticket Request via CLI",
+    "id": "caa9a802-8bd8-4b9e-a5cd-4d6221670219",
+    "description": "Detects suspicious Kerberos ticket requests via command line using System.IdentityModel.Tokens.KerberosRequestorSecurityToken class.\nThreat actors may use command line interfaces to request Kerberos tickets for service accounts in order to\nperform offline password cracking attacks commonly known as Kerberoasting or other Kerberos ticket abuse\ntechniques like silver ticket attacks.\n",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\powershell.exe' OR Image LIKE '%\\\\pwsh.exe' AND OriginalFileName LIKE '%powershell.exe%' OR OriginalFileName LIKE '%pwsh.dll%' AND CommandLine LIKE '%System.IdentityModel.Tokens.KerberosRequestorSecurityToken%' OR CommandLine LIKE '%.GetRequest()%'"
+    ]
+  },
+  {
+    "title": "Suspicious DNS Query Indicating Kerberos Coercion via DNS Object SPN Spoofing",
+    "id": "e7a21b5f-d8c4-4ae5-b8d9-93c5d3f28e1c",
+    "description": "Detects DNS queries containing patterns associated with Kerberos coercion attacks via DNS object spoofing.\nThe pattern \"1UWhRCAAAAA..BAAAA\" is a base64-encoded signature that corresponds to a marshaled CREDENTIAL_TARGET_INFORMATION structure.\nAttackers can use this technique to coerce authentication from victim systems to attacker-controlled hosts.\nIt is one of the strong indicators of a Kerberos coercion attack, where adversaries manipulate DNS records\nto spoof Service Principal Names (SPNs) and redirect authentication requests like CVE-2025-33073.\n",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-DNS Client Events/Operational' AND EventID=22 AND QueryName LIKE '%UWhRCA%' OR QueryName LIKE '%BAAAA%'"
+    ]
+  },
+  {
+    "title": "Lsass Memory Dump via Comsvcs DLL",
+    "id": "a49fa4d5-11db-418c-8473-1e014a8dd462",
+    "description": "Detects adversaries leveraging the MiniDump export function from comsvcs.dll via rundll32 to perform a memory dump from lsass.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=10 AND TargetImage LIKE '%\\\\lsass.exe' AND SourceImage LIKE '%\\\\rundll32.exe' AND CallTrace LIKE '%comsvcs.dll%'"
+    ]
+  },
+  {
+    "title": "HackTool - Doppelanger LSASS Dumper Execution",
+    "id": "d474c8fe-bb69-4ea0-b7d9-f682b56d52d3",
+    "description": "Detects the execution of the Doppelanger hacktool which is used to dump LSASS memory via process cloning while evading common detection methods",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\Doppelganger.exe' AND Hashes LIKE '%IMPHASH=AB94D5217896ADCD765A06B2D52F0AEB%' OR Hashes LIKE '%IMPHASH=65F0EA61156EE0C2A35421926F0C7F78%'"
+    ]
+  },
+  {
+    "title": "Possible DC Shadow Attack",
+    "id": "32e19d25-4aed-4860-a55a-be99cb0bf7ed",
+    "description": "Detects DCShadow via create new SPN",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID IN (5136,4742) AND (EventID = 4742 OR ServicePrincipalNames LIKE '%GC/%' OR EventID = 5136 OR AttributeLDAPDisplayName LIKE '%servicePrincipalName%' OR AttributeValue LIKE 'GC/%')"
+    ]
+  },
+  {
+    "title": "Suspicious Volume Shadow Copy Vssapi.dll Load",
+    "id": "37774c23-25a1-4adb-bb6d-8bb9fd59c0f8",
+    "description": "Detects the image load of VSS DLL by uncommon executables",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=7 AND ImageLoaded LIKE '%\\\\vssapi.dll' AND NOT (Image NOT LIKE '%C:\\\\Windows\\\\explorer.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\ImmersiveControlPanel\\\\SystemSettings.exe%') AND NOT (Image NOT LIKE 'C:\\\\Windows\\\\System32\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\SysWOW64\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\Temp\\\\{%' OR Image NOT LIKE 'C:\\\\Windows\\\\WinSxS\\\\%') AND NOT (Image NOT LIKE 'C:\\\\Program Files\\\\%' OR Image NOT LIKE 'C:\\\\Program Files (x86)\\\\%') AND NOT (Image != None) AND NOT (Image NOT LIKE 'C:\\\\ProgramData\\\\Package Cache\\\\%') AND NOT (Image NOT LIKE '%\\\\temp\\\\is-%' OR Image NOT LIKE '%\\\\avira\\_system\\_speedup.tmp%')"
+    ]
+  },
+  {
+    "title": "Potentially Suspicious Volume Shadow Copy Vsstrace.dll Load",
+    "id": "48bfd177-7cf2-412b-ad77-baf923489e82",
+    "description": "Detects the image load of VSS DLL by uncommon executables",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=7 AND ImageLoaded LIKE '%\\\\vsstrace.dll' AND NOT (Image NOT LIKE '%C:\\\\Windows\\\\explorer.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\ImmersiveControlPanel\\\\SystemSettings.exe%') AND NOT (Image NOT LIKE 'C:\\\\Windows\\\\System32\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\SysWOW64\\\\%' OR Image NOT LIKE 'C:\\\\Windows\\\\Temp\\\\{%' OR Image NOT LIKE 'C:\\\\Windows\\\\WinSxS\\\\%' OR Image NOT LIKE 'C:\\\\ProgramData\\\\Package Cache\\\\{%') AND NOT (Image NOT LIKE 'C:\\\\Program Files\\\\%' OR Image NOT LIKE 'C:\\\\Program Files (x86)\\\\%') AND NOT (Image NOT LIKE 'C:\\\\$WinREAgent\\\\Scratch\\\\%') AND NOT (Image != None) AND NOT (Image NOT LIKE '%\\\\temp\\\\is-%' OR Image NOT LIKE '%\\\\avira\\_system\\_speedup.tmp%')"
+    ]
+  },
+  {
+    "title": "Scheduled Task Creation Via Schtasks.EXE",
+    "id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+    "description": "Detects the creation of scheduled tasks by user accounts via the \"schtasks\" utility.",
+    "level": "low",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\schtasks.exe' AND CommandLine LIKE '% /create %' AND NOT (User NOT LIKE '%AUTHORI%' OR User NOT LIKE '%AUTORI%') AND NOT (ParentImage NOT LIKE '%C:\\\\Program Files\\\\Microsoft Office\\\\root\\\\integration\\\\integrator.exe%' OR ParentImage NOT LIKE '%C:\\\\Program Files (x86)\\\\Microsoft Office\\\\root\\\\integration\\\\integrator.exe%') AND NOT (Image NOT LIKE '%C:\\\\Windows\\\\System32\\\\schtasks.exe%' OR Image NOT LIKE '%C:\\\\Windows\\\\SysWOW64\\\\schtasks.exe%') AND NOT (CommandLine NOT LIKE '%Microsoft\\\\Office\\\\Office Performance Monitor%')"
+    ]
+  },
+  {
+    "title": "Scheduled Task Creation with Curl and PowerShell Execution Combo",
+    "id": "1d174d38-8fda-4081-a9b6-56d9763c0cd8",
+    "description": "Detects the creation of a scheduled task using schtasks.exe, potentially in combination with curl for downloading payloads and PowerShell for executing them.\nThis facilitates executing malicious payloads or connecting with C&C server persistently without dropping the malware sample on the host.\n",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\schtasks.exe' AND CommandLine LIKE '% /create %' AND CommandLine LIKE '%curl %' OR CommandLine LIKE '%http%' OR CommandLine LIKE '%-o%' AND CommandLine LIKE '%powershell%'"
+    ]
+  },
+  {
+    "title": "Delete All Scheduled Tasks",
+    "id": "220457c1-1c9f-4c2e-afe6-9598926222c1",
+    "description": "Detects the usage of schtasks with the delete flag and the asterisk symbol to delete all tasks from the schedule of the local computer, including tasks scheduled by other users.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\schtasks.exe' AND CommandLine LIKE '% /delete %' OR CommandLine LIKE '%/tn \\\\*%' OR CommandLine LIKE '% /f%'"
+    ]
+  },
+  {
+    "title": "Potential SPN Enumeration Via Setspn.EXE",
+    "id": "1eeed653-dbc8-4187-ad0c-eeebb20e6599",
+    "description": "Detects service principal name (SPN) enumeration used for Kerberoasting",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\setspn.exe' AND OriginalFileName LIKE '%setspn.exe%' AND Description LIKE '%Query or reset the computer%' OR Description LIKE '%SPN attribute%' AND CommandLine LIKE '% -q %' OR CommandLine LIKE '% /q %'"
+    ]
+  },
+  {
+    "title": "Active Directory Replication from Non Machine Account",
+    "id": "17d619c1-e020-4347-957e-1d1207455c93",
+    "description": "Detects potential abuse of Active Directory Replication Service (ADRS) from a non machine account to request credentials.",
+    "level": "critical",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=4662 AND EventID = 4662 AND AccessMask LIKE '%0x100%' AND Properties LIKE '%1131f6aa-9c07-11d1-f79f-00c04fc2dcd2%' OR Properties LIKE '%1131f6ad-9c07-11d1-f79f-00c04fc2dcd2%' OR Properties LIKE '%89e95b76-444d-4c62-991a-0facbeda640c%'"
+    ]
+  },
+  {
+    "title": "Powerview Add-DomainObjectAcl DCSync AD Extend Right",
+    "id": "2c99737c-585d-4431-b61a-c911d86ff32f",
+    "description": "Backdooring domain object to grant the rights associated with DCSync to a regular user or machine account using Powerview\\Add-DomainObjectAcl DCSync Extended Right cmdlet, will allow to re-obtain the pwd hashes of any user/computer",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=5136 AND EventID = 5136 AND AttributeLDAPDisplayName LIKE '%ntSecurityDescriptor%' AND AttributeValue LIKE '%1131f6ad-9c07-11d1-f79f-00c04fc2dcd2%' OR AttributeValue LIKE '%1131f6aa-9c07-11d1-f79f-00c04fc2dcd2%' OR AttributeValue LIKE '%89e95b76-444d-4c62-991a-0facbeda640c%' AND NOT (ObjectClass NOT LIKE '%dnsNode%' OR ObjectClass NOT LIKE '%dnsZoneScope%' OR ObjectClass NOT LIKE '%dnsZone%')"
+    ]
+  },
+  {
+    "title": "Mimikatz DC Sync",
+    "id": "611eab06-a145-4dfa-a295-3ccc5c20f59a",
+    "description": "Detects Mimikatz DC sync security events",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=4662 AND EventID = 4662 AND Properties LIKE '%Replicating Directory Changes All%' OR Properties LIKE '%1131f6ad-9c07-11d1-f79f-00c04fc2dcd2%' OR Properties LIKE '%1131f6aa-9c07-11d1-f79f-00c04fc2dcd2%' OR Properties LIKE '%9923a32a-3607-11d2-b9be-0000f87a36b2%' OR Properties LIKE '%89e95b76-444d-4c62-991a-0facbeda640c%' AND AccessMask LIKE '%0x100%'"
+    ]
+  },
+  {
+    "title": "HackTool - Bloodhound/Sharphound Execution",
+    "id": "f376c8a7-a2d0-4ddc-aa0c-16c17236d962",
+    "description": "Detects command line parameters used by Bloodhound and Sharphound hack tools",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Product LIKE '%SharpHound%' AND Description LIKE '%SharpHound%' AND Company LIKE '%SpecterOps%' OR Company LIKE '%evil corp%' AND Image LIKE '%\\\\Bloodhound.exe%' OR Image LIKE '%\\\\SharpHound.exe%' AND CommandLine LIKE '% -CollectionMethod All %' OR CommandLine LIKE '% --CollectionMethods Session %' OR CommandLine LIKE '% --Loop --Loopduration %' OR CommandLine LIKE '% --PortScanTimeout %' OR CommandLine LIKE '%.exe -c All -d %' OR CommandLine LIKE '%Invoke-Bloodhound%' OR CommandLine LIKE '%Get-BloodHoundData%' AND CommandLine LIKE '% -JsonFolder %' OR CommandLine LIKE '% -ZipFileName %' AND CommandLine LIKE '% DCOnly %' OR CommandLine LIKE '% --NoSaveCache %'"
+    ]
+  },
+  {
+    "title": "BloodHound Collection Files",
+    "id": "02773bed-83bf-469f-b7ff-e676e7d78bab",
+    "description": "Detects default file names outputted by the BloodHound collection tool SharpHound",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=11 AND TargetFilename LIKE '%BloodHound.zip' OR TargetFilename LIKE '%\\_computers.json' OR TargetFilename LIKE '%\\_containers.json' OR TargetFilename LIKE '%\\_gpos.json' OR TargetFilename LIKE '%\\_groups.json' OR TargetFilename LIKE '%\\_ous.json' OR TargetFilename LIKE '%\\_users.json' AND NOT (Image NOT LIKE '%\\\\svchost.exe') AND NOT (TargetFilename NOT LIKE 'C:\\\\Program Files\\\\WindowsApps\\\\Microsoft.%') AND NOT (TargetFilename NOT LIKE '%\\\\pocket\\_containers.json')"
+    ]
+  },
+  {
+    "title": "Dynamic .NET Compilation Via Csc.EXE",
+    "id": "dcaa3f04-70c3-427a-80b4-b870d73c94c4",
+    "description": "Detects execution of \"csc.exe\" to compile .NET code. Attackers often leverage this to compile code on the fly and use it in other stages.",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\csc.exe' AND CommandLine LIKE '%:\\\\Perflogs\\\\%' OR CommandLine LIKE '%:\\\\Users\\\\Public\\\\%' OR CommandLine LIKE '%\\\\AppData\\\\Local\\\\Temp\\\\%' OR CommandLine LIKE '%\\\\Temporary Internet%' OR CommandLine LIKE '%\\\\Windows\\\\Temp\\\\%' AND CommandLine LIKE '%:\\\\Users\\\\%' OR CommandLine LIKE '%\\\\Favorites\\\\%' AND CommandLine LIKE '%:\\\\Users\\\\%' OR CommandLine LIKE '%\\\\Favourites\\\\%' AND CommandLine LIKE '%:\\\\Users\\\\%' OR CommandLine LIKE '%\\\\Contacts\\\\%' AND CommandLine LIKE '%:\\\\Users\\\\%' OR CommandLine LIKE '%\\\\Pictures\\\\%' AND CommandLine LIKE '%(?:[Pp]rogram[Dd]ata|\\%(?:[Ll]ocal)?[Aa]pp[Dd]ata\\%|\\\\\\\\[Aa]pp[Dd]ata\\\\\\\\(?:[Ll]ocal(?:[Ll]ow)?|[Rr]oaming))\\\\\\\\[^\\\\\\\\]{1,256}$%' AND NOT (ParentImage NOT LIKE 'C:\\\\Program Files (x86)\\\\%' OR ParentImage NOT LIKE 'C:\\\\Program Files\\\\%') AND NOT (ParentImage NOT LIKE '%C:\\\\Windows\\\\System32\\\\sdiagnhost.exe%') AND NOT (ParentImage NOT LIKE '%C:\\\\Windows\\\\System32\\\\inetsrv\\\\w3wp.exe%') AND NOT (ParentImage NOT LIKE '%C:\\\\ProgramData\\\\chocolatey\\\\choco.exe%' OR ParentImage NOT LIKE '%C:\\\\ProgramData\\\\chocolatey\\\\tools\\\\shimgen.exe%') AND NOT (ParentCommandLine NOT LIKE '%\\\\ProgramData\\\\Microsoft\\\\Windows Defender Advanced Threat Protection%') AND NOT (ParentCommandLine NOT LIKE '%JwB7ACIAZgBhAGkAbABlAGQAIgA6AHQAcgB1AGUALAAiAG0AcwBnACIAOgAiAEEAbgBzAGkAYgBsAGUAIAByAGUAcQB1AGkAcgBlAHMAIABQAG8AdwBlAHIAUwBoAGUAbABsACAAdgAzAC4AMAAgAG8AcgAgAG4AZQB3AGUAcgAiAH0AJw%' OR ParentCommandLine NOT LIKE '%cAewAiAGYAYQBpAGwAZQBkACIAOgB0AHIAdQBlACwAIgBtAHMAZwAiADoAIgBBAG4AcwBpAGIAbABlACAAcgBlAHEAdQBpAHIAZQBzACAAUABvAHcAZQByAFMAaABlAGwAbAAgAHYAMwAuADAAIABvAHIAIABuAGUAdwBlAHIAIgB9ACcA%' OR ParentCommandLine NOT LIKE '%nAHsAIgBmAGEAaQBsAGUAZAAiADoAdAByAHUAZQAsACIAbQBzAGcAIgA6ACIAQQBuAHMAaQBiAGwAZQAgAHIAZQBxAHUAaQByAGUAcwAgAFAAbwB3AGUAcgBTAGgAZQBsAGwAIAB2ADMALgAwACAAbwByACAAbgBlAHcAZQByACIAfQAnA%')"
+    ]
+  },
+  {
+    "title": "Csc.EXE Execution Form Potentially Suspicious Parent",
+    "id": "b730a276-6b63-41b8-bcf8-55930c8fc6ee",
+    "description": "Detects a potentially suspicious parent of \"csc.exe\", which could be a sign of payload delivery.",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\csc.exe' AND OriginalFileName LIKE '%csc.exe%' AND ParentImage LIKE '%\\\\cscript.exe' OR ParentImage LIKE '%\\\\excel.exe' OR ParentImage LIKE '%\\\\mshta.exe' OR ParentImage LIKE '%\\\\onenote.exe' OR ParentImage LIKE '%\\\\outlook.exe' OR ParentImage LIKE '%\\\\powerpnt.exe' OR ParentImage LIKE '%\\\\winword.exe' OR ParentImage LIKE '%\\\\wscript.exe' AND ParentImage LIKE '%\\\\powershell.exe' OR ParentImage LIKE '%\\\\pwsh.exe' AND ParentCommandLine LIKE '%-Encoded %' OR ParentCommandLine LIKE '%FromBase64String%' AND ParentCommandLine LIKE '%(?:[Pp]rogram[Dd]ata|\\%(?:[Ll]ocal)?[Aa]pp[Dd]ata\\%|\\\\\\\\[Aa]pp[Dd]ata\\\\\\\\(?:[Ll]ocal(?:[Ll]ow)?|[Rr]oaming))\\\\\\\\[^\\\\\\\\]{1,256}$%' AND ParentCommandLine LIKE '%:\\\\PerfLogs\\\\%' OR ParentCommandLine LIKE '%:\\\\Users\\\\Public\\\\%' OR ParentCommandLine LIKE '%:\\\\Windows\\\\Temp\\\\%' OR ParentCommandLine LIKE '%\\\\Temporary Internet%' AND ParentCommandLine LIKE '%:\\\\Users\\\\%' OR ParentCommandLine LIKE '%\\\\Favorites\\\\%' AND ParentCommandLine LIKE '%:\\\\Users\\\\%' OR ParentCommandLine LIKE '%\\\\Favourites\\\\%' AND ParentCommandLine LIKE '%:\\\\Users\\\\%' OR ParentCommandLine LIKE '%\\\\Contacts\\\\%' AND ParentCommandLine LIKE '%:\\\\Users\\\\%' OR ParentCommandLine LIKE '%\\\\Pictures\\\\%' AND NOT (ParentImage NOT LIKE 'C:\\\\Program Files (x86)\\\\%' OR ParentImage NOT LIKE 'C:\\\\Program Files\\\\%') AND NOT (ParentImage NOT LIKE '%C:\\\\Windows\\\\System32\\\\sdiagnhost.exe%') AND NOT (ParentImage NOT LIKE '%C:\\\\Windows\\\\System32\\\\inetsrv\\\\w3wp.exe%') AND NOT (ParentImage NOT LIKE '%C:\\\\ProgramData\\\\chocolatey\\\\choco.exe%') AND NOT (ParentCommandLine NOT LIKE '%\\\\ProgramData\\\\Microsoft\\\\Windows Defender Advanced Threat Protection%') AND NOT (ParentCommandLine NOT LIKE '%JwB7ACIAZgBhAGkAbABlAGQAIgA6AHQAcgB1AGUALAAiAG0AcwBnACIAOgAiAEEAbgBzAGkAYgBsAGUAIAByAGUAcQB1AGkAcgBlAHMAIABQAG8AdwBlAHIAUwBoAGUAbABsACAAdgAzAC4AMAAgAG8AcgAgAG4AZQB3AGUAcgAiAH0AJw%' OR ParentCommandLine NOT LIKE '%cAewAiAGYAYQBpAGwAZQBkACIAOgB0AHIAdQBlACwAIgBtAHMAZwAiADoAIgBBAG4AcwBpAGIAbABlACAAcgBlAHEAdQBpAHIAZQBzACAAUABvAHcAZQByAFMAaABlAGwAbAAgAHYAMwAuADAAIABvAHIAIABuAGUAdwBlAHIAIgB9ACcA%' OR ParentCommandLine NOT LIKE '%nAHsAIgBmAGEAaQBsAGUAZAAiADoAdAByAHUAZQAsACIAbQBzAGcAIgA6ACIAQQBuAHMAaQBiAGwAZQAgAHIAZQBxAHUAaQByAGUAcwAgAFAAbwB3AGUAcgBTAGgAZQBsAGwAIAB2ADMALgAwACAAbwByACAAbgBlAHcAZQByACIAfQAnA%')"
+    ]
+  },
+  {
+    "title": "ADFS Database Named Pipe Connection By Uncommon Tool",
+    "id": "1ea13e8c-03ea-409b-877d-ce5c3d2c1cb3",
+    "description": "Detects suspicious local connections via a named pipe to the AD FS configuration database (Windows Internal Database).\nUsed to access information such as the AD FS configuration settings which contains sensitive information used to sign SAML tokens.\n",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=17 AND PipeName LIKE '%\\\\MICROSOFT##WID\\\\tsql\\\\query%' AND NOT (Image NOT LIKE '%:\\\\Windows\\\\System32\\\\mmc.exe' OR Image NOT LIKE '%:\\\\Windows\\\\system32\\\\svchost.exe' OR Image NOT LIKE '%:\\\\Windows\\\\System32\\\\wsmprovhost.exe' OR Image NOT LIKE '%:\\\\Windows\\\\SysWOW64\\\\mmc.exe' OR Image NOT LIKE '%:\\\\Windows\\\\SysWOW64\\\\wsmprovhost.exe' OR Image NOT LIKE '%:\\\\Windows\\\\WID\\\\Binn\\\\sqlwriter.exe' OR Image NOT LIKE '%\\\\AzureADConnect.exe' OR Image NOT LIKE '%\\\\Microsoft.Identity.Health.Adfs.PshSurrogate.exe' OR Image NOT LIKE '%\\\\Microsoft.IdentityServer.ServiceHost.exe' OR Image NOT LIKE '%\\\\Microsoft.Tri.Sensor.exe' OR Image NOT LIKE '%\\\\sqlservr.exe' OR Image NOT LIKE '%\\\\tssdis.exe')"
+    ]
+  },
+  {
+    "title": "CobaltStrike Named Pipe",
+    "id": "d5601f8c-b26f-4ab0-9035-69e11a8d4ad2",
+    "description": "Detects the creation of a named pipe as used by CobaltStrike",
+    "level": "critical",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=17 AND (PipeName LIKE '%\\\\MSSE-%' OR PipeName LIKE '%-server%' OR PipeName LIKE '\\\\postex\\_%' OR PipeName LIKE '\\\\status\\_%' OR PipeName LIKE '\\\\msagent\\_%' OR PipeName LIKE '\\\\mojo\\_%' OR PipeName LIKE '\\\\interprocess\\_%' OR PipeName LIKE '\\\\samr\\_%' OR PipeName LIKE '\\\\netlogon\\_%' OR PipeName LIKE '\\\\srvsvc\\_%' OR PipeName LIKE '\\\\lsarpc\\_%' OR PipeName LIKE '\\\\wkssvc\\_%')"
+    ]
+  },
+  {
+    "title": "CobaltStrike Named Pipe Pattern Regex",
+    "id": "0e7163d4-9e19-4fa7-9be6-000c61aad77a",
+    "description": "Detects the creation of a named pipe matching a pattern used by CobaltStrike Malleable C2 profiles",
+    "level": "critical",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Microsoft-Windows-Sysmon/Operational' AND EventID=17 AND PipeName LIKE '%\\\\\\\\mojo\\\\.5688\\\\.8052\\\\.(?:183894939787088877|35780273329370473)[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\wkssvc\\_?[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\ntsvcs[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\DserNamePipe[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\SearchTextHarvester[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\mypipe-(?:f|h)[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\windows\\\\.update\\\\.manager[0-9a-f]{2,3}%' AND PipeName LIKE '%\\\\\\\\ntsvcs\\_[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\scerpc\\_?[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\PGMessagePipe[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\MsFteWds[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\f4c3[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\fullduplex\\_[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\msrpc\\_[0-9a-f]{4}%' AND PipeName LIKE '%\\\\\\\\win\\\\\\\\msrpc\\_[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\f53f[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\rpc\\_[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\spoolss\\_[0-9a-f]{2}%' AND PipeName LIKE '%\\\\\\\\Winsock2\\\\\\\\CatalogChangeListener-[0-9a-f]{3}-0,%'"
+    ]
+  },
+  {
+    "title": "New BITS Job Created Via Bitsadmin",
+    "id": "1ff315dc-2a3a-4b71-8dde-873818d25d39",
+    "description": "Detects the creation of a new bits job by Bitsadmin",
+    "level": "low",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=3 AND EventID = 3 AND processPath LIKE '%\\\\bitsadmin.exe'"
+    ]
+  },
+  {
+    "title": "File Download Via Bitsadmin",
+    "id": "d059842b-6b9d-4ed1-b5c3-5b89143c6ede",
+    "description": "Detects usage of bitsadmin downloading a file",
+    "level": "medium",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\bitsadmin.exe' AND OriginalFileName LIKE '%bitsadmin.exe%' AND CommandLine LIKE '% /transfer %' AND CommandLine LIKE '% /create %' OR CommandLine LIKE '% /addfile %' AND CommandLine LIKE '%http%'"
+    ]
+  },
+  {
+    "title": "Suspicious Download From Direct IP Via Bitsadmin",
+    "id": "99c840f2-2012-46fd-9141-c761987550ef",
+    "description": "Detects usage of bitsadmin downloading a file using an URL that contains an IP",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND Image LIKE '%\\\\bitsadmin.exe' AND OriginalFileName LIKE '%bitsadmin.exe%' AND CommandLine LIKE '% /transfer %' OR CommandLine LIKE '% /create %' OR CommandLine LIKE '% /addfile %' AND CommandLine LIKE '%://1%' OR CommandLine LIKE '%://2%' OR CommandLine LIKE '%://3%' OR CommandLine LIKE '%://4%' OR CommandLine LIKE '%://5%' OR CommandLine LIKE '%://6%' OR CommandLine LIKE '%://7%' OR CommandLine LIKE '%://8%' OR CommandLine LIKE '%://9%' AND NOT (CommandLine NOT LIKE '%://7-%')"
+    ]
+  },
+  {
+    "title": "Powershell Defender Disable Scan Feature",
+    "id": "1ec65a5f-9473-4f12-97da-622044d6df21",
+    "description": "Detects requests to disable Microsoft Defender features using PowerShell commands",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND CommandLine LIKE '%Add-MpPreference %' OR CommandLine LIKE '%Set-MpPreference %' AND CommandLine LIKE '%DisableArchiveScanning %' OR CommandLine LIKE '%DisableRealtimeMonitoring %' OR CommandLine LIKE '%DisableIOAVProtection %' OR CommandLine LIKE '%DisableBehaviorMonitoring %' OR CommandLine LIKE '%DisableBlockAtFirstSeen %' OR CommandLine LIKE '%DisableCatchupFullScan %' OR CommandLine LIKE '%DisableCatchupQuickScan %' AND CommandLine LIKE '%$true%' OR CommandLine LIKE '% 1 %' AND CommandLine LIKE '%disablearchivescanning %' OR CommandLine LIKE '%DisableArchiveScanning %' OR CommandLine LIKE '%disablebehaviormonitoring %' OR CommandLine LIKE '%DisableBehaviorMonitoring %' OR CommandLine LIKE '%disableblockatfirstseen %' OR CommandLine LIKE '%DisableBlockAtFirstSeen %' OR CommandLine LIKE '%disablecatchupfullscan %' OR CommandLine LIKE '%DisableCatchupFullScan %' OR CommandLine LIKE '%disablecatchupquickscan %' OR CommandLine LIKE '%DisableCatchupQuickScan %' OR CommandLine LIKE '%disableioavprotection %' OR CommandLine LIKE '%DisableIOAVProtection %' OR CommandLine LIKE '%disablerealtimemonitoring %' OR CommandLine LIKE '%DisableRealtimeMonitoring %' AND CommandLine LIKE '%RABpAHMAYQBiAGwAZQBSAGUAYQBsAHQAaQBtAGUATQBvAG4AaQB0AG8AcgBpAG4AZwAgA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAUgBlAGEAbAB0AGkAbQBlAE0AbwBuAGkAdABvAHIAaQBuAGcAIA%' OR CommandLine LIKE '%EAGkAcwBhAGIAbABlAFIAZQBhAGwAdABpAG0AZQBNAG8AbgBpAHQAbwByAGkAbgBnACAA%' OR CommandLine LIKE '%RABpAHMAYQBiAGwAZQBJAE8AQQBWAFAAcgBvAHQAZQBjAHQAaQBvAG4AIA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUASQBPAEEAVgBQAHIAbwB0AGUAYwB0AGkAbwBuACAA%' OR CommandLine LIKE '%EAGkAcwBhAGIAbABlAEkATwBBAFYAUAByAG8AdABlAGMAdABpAG8AbgAgA%' OR CommandLine LIKE '%RABpAHMAYQBiAGwAZQBCAGUAaABhAHYAaQBvAHIATQBvAG4AaQB0AG8AcgBpAG4AZwAgA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAQgBlAGgAYQB2AGkAbwByAE0AbwBuAGkAdABvAHIAaQBuAGcAIA%' OR CommandLine LIKE '%EAGkAcwBhAGIAbABlAEIAZQBoAGEAdgBpAG8AcgBNAG8AbgBpAHQAbwByAGkAbgBnACAA%' OR CommandLine LIKE '%RABpAHMAYQBiAGwAZQBCAGwAbwBjAGsAQQB0AEYAaQByAHMAdABTAGUAZQBuACAA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAQgBsAG8AYwBrAEEAdABGAGkAcgBzAHQAUwBlAGUAbgAgA%' OR CommandLine LIKE '%EAGkAcwBhAGIAbABlAEIAbABvAGMAawBBAHQARgBpAHIAcwB0AFMAZQBlAG4AIA%' OR CommandLine LIKE '%ZABpAHMAYQBiAGwAZQByAGUAYQBsAHQAaQBtAGUAbQBvAG4AaQB0AG8AcgBpAG4AZwAgA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAcgBlAGEAbAB0AGkAbQBlAG0AbwBuAGkAdABvAHIAaQBuAGcAIA%' OR CommandLine LIKE '%kAGkAcwBhAGIAbABlAHIAZQBhAGwAdABpAG0AZQBtAG8AbgBpAHQAbwByAGkAbgBnACAA%' OR CommandLine LIKE '%ZABpAHMAYQBiAGwAZQBpAG8AYQB2AHAAcgBvAHQAZQBjAHQAaQBvAG4AIA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAaQBvAGEAdgBwAHIAbwB0AGUAYwB0AGkAbwBuACAA%' OR CommandLine LIKE '%kAGkAcwBhAGIAbABlAGkAbwBhAHYAcAByAG8AdABlAGMAdABpAG8AbgAgA%' OR CommandLine LIKE '%ZABpAHMAYQBiAGwAZQBiAGUAaABhAHYAaQBvAHIAbQBvAG4AaQB0AG8AcgBpAG4AZwAgA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAYgBlAGgAYQB2AGkAbwByAG0AbwBuAGkAdABvAHIAaQBuAGcAIA%' OR CommandLine LIKE '%kAGkAcwBhAGIAbABlAGIAZQBoAGEAdgBpAG8AcgBtAG8AbgBpAHQAbwByAGkAbgBnACAA%' OR CommandLine LIKE '%ZABpAHMAYQBiAGwAZQBiAGwAbwBjAGsAYQB0AGYAaQByAHMAdABzAGUAZQBuACAA%' OR CommandLine LIKE '%QAaQBzAGEAYgBsAGUAYgBsAG8AYwBrAGEAdABmAGkAcgBzAHQAcwBlAGUAbgAgA%' OR CommandLine LIKE '%kAGkAcwBhAGIAbABlAGIAbABvAGMAawBhAHQAZgBpAHIAcwB0AHMAZQBlAG4AIA%' OR CommandLine LIKE '%RABpAHMAYQBiAGwAZQBDAGEAdABjAGgAdQBwAEYAdQBsAGwAUwBjAGEAbgA%' OR CommandLine LIKE '%RABpAHMAYQBiAGwAZQBDAGEAdABjAGgAdQBwAFEAdQBpAGMAawBTAGMAYQBuAA%' OR CommandLine LIKE '%RABpAHMAYQBiAGwAZQBBAHIAYwBoAGkAdgBlAFMAYwBhAG4AbgBpAG4AZwA%'"
+    ]
+  },
+  {
+    "title": "PowerShell Defender Threat Severity Default Action Set to 'Allow' or 'NoAction'",
+    "id": "1e8a9b4d-3c2a-4f9b-8d1e-7c6a5b4f3d2e",
+    "description": "Detects the use of PowerShell to execute the 'Set-MpPreference' cmdlet to configure Windows Defender's threat severity default action to 'Allow' (value '6') or 'NoAction' (value '9').\nThis is a highly suspicious configuration change that effectively disables Defender's ability to automatically mitigate threats of a certain severity level.\nAn attacker might use this technique via the command line to bypass defenses before executing payloads.\n",
+    "level": "high",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=1 AND CommandLine LIKE '%Set-MpPreference%' AND CommandLine LIKE '%-LowThreatDefaultAction%' OR CommandLine LIKE '%-ModerateThreatDefaultAction%' OR CommandLine LIKE '%-HighThreatDefaultAction%' OR CommandLine LIKE '%-SevereThreatDefaultAction%' OR CommandLine LIKE '%-ltdefac %' OR CommandLine LIKE '%-mtdefac %' OR CommandLine LIKE '%-htdefac %' OR CommandLine LIKE '%-stdefac %' AND CommandLine LIKE '%Allow%' OR CommandLine LIKE '%6%' OR CommandLine LIKE '%NoAction%' OR CommandLine LIKE '%9%'"
+    ]
+  },
+  {
+    "title": "New BITS Job Created Via PowerShell",
+    "id": "fe3a2d49-f255-4d10-935c-bda7391108eb",
+    "description": "Detects the creation of a new bits job by PowerShell",
+    "level": "low",
+    "rule": [
+      "SELECT * FROM logs WHERE Channel='Security' AND EventID=3 AND EventID = 3 AND processPath LIKE '%\\\\powershell.exe' OR processPath LIKE '%\\\\pwsh.exe'"
+    ]
+  }
+]
